@@ -20,15 +20,16 @@ import time
 import math
 import matplotlib.pyplot as plt
 
-from OptimalCuts import Rectangle, isDisjoint, optimalCuts
+from OptimalCuts import Rectangle, optimalCuts
+from plotGenerations import plot_rectangles
 
 N = 14  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions =1000 # number of new sessions per iteration - batch size
-percentile = 80 # top 100-X percentile we are learning from
-super_percentile = 85 # top 100-X percentile that survives to next iteration
+percentile = 75 # top 100-X percentile we are learning from
+super_percentile = 90 # top 100-X percentile that survives to next iteration
 region_bound = 100  # we will generate rectangles within a region enclosed by x = 0, x = 100, y = 0, y = 100
 
 # The original work revolves around generating a binary or n-ary sentence encoding
@@ -63,23 +64,29 @@ model = Sequential()
 model.add(Dense(FIRST_LAYER_NEURONS,  activation="relu"))
 model.add(Dense(SECOND_LAYER_NEURONS, activation="relu"))
 model.add(Dense(THIRD_LAYER_NEURONS, activation="relu"))
-model.add(Dense(n_actions, activation="sigmoid"))  # Alternatively, we can add softmax to this later just to maintain numerical stability during training
+model.add(Dense(n_actions, activation="softmax"))  # Alternatively, we can add softmax to this later just to maintain numerical stability during training
 model.build((None, observation_space))
-model.compile(loss=CategoricalCrossentropy, optimizer=SGD(learning_rate = LEARNING_RATE)) #Adam optimizer also works well, with lower learning rate
+model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate = LEARNING_RATE)) #Adam optimizer also works well, with lower learning rate
 
 print(model.summary())
 
 # Changes for N actions instead of 2 need to be incorporated 
 
-def calc_score(state):
-	
-	# Reward function
-	rectangles = []
+def rectsFromState(state):
+	rects = []
 	i = 0
 	
 	while (i < DECISIONS*4):
-		rectangles.append(Rectangle( bottomLeft = (state[i], state[i+1]), topRight = (state[i+2], state[i+3]) ))
+		rects.append(Rectangle( bottomLeft = ( min(state[i], state[i+1]), min(state[i+2], state[i+3]) ), topRight = ( max(state[i], state[i+1]), max(state[i+2], state[i+3]) ) ))
 		i += 4
+
+	return rects
+	
+
+def calc_score(state):
+	
+	# Reward function
+	rectangles = rectsFromState(state)
 	
 	# Apply optimal cuts algorithm
 	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))
@@ -89,7 +96,7 @@ def calc_score(state):
 		return -1000
 
 	# For disjoint sets, reward is proportional to number of killed rectangles
-	return optimalCutsResult[2] - (N/2)
+	return optimalCutsResult[2]
 
 
 def play_game(n_sessions, actions,state_next,states,prob, step, total_score):
@@ -240,6 +247,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	randomcomp_time = time.time()-tic 
 	tic = time.time()
 
+	# elite_actions is a numpy array
 	elite_states, elite_actions = select_elites(states_batch, actions_batch, rewards_batch, percentile=percentile) #pick the sessions to learn from
 	select1_time = time.time()-tic
 
@@ -251,9 +259,13 @@ for i in range(1000000): #1000000 generations should be plenty
 	super_sessions = [(super_sessions[0][i], super_sessions[1][i], super_sessions[2][i]) for i in range(len(super_sessions[2]))]
 	super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
 	select3_time = time.time()-tic
+
+	#one hot encoding for elite actions
+	elite_actions_one_hot = np.zeros((elite_actions.size, 100))
+	elite_actions_one_hot[np.arange(elite_actions.size), elite_actions] = 1
 	
 	tic = time.time()
-	model.fit(elite_states, elite_actions) #learn from the elite sessions
+	model.fit(elite_states, elite_actions_one_hot) #learn from the elite sessions
 	fit_time = time.time()-tic
 	
 	tic = time.time()
@@ -273,8 +285,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	#uncomment below line to print out how much time each step in this loop takes. 
 	print(	"Mean reward: " + str(mean_all_reward) + "\nSessgen: " + str(sessgen_time) + ", other: " + str(randomcomp_time) + ", select1: " + str(select1_time) + ", select2: " + str(select2_time) + ", select3: " + str(select3_time) +  ", fit: " + str(fit_time) + ", score: " + str(score_time)) 
 	
-	
-	if (i%20 == 1): #Write all important info to files every 20 iterations
+	if (i%20 == 0): #Write all important info to files every 20 iterations
 		with open('best_species_pickle_'+str(myRand)+'.txt', 'wb') as fp:
 			pickle.dump(super_actions, fp)
 		with open('best_species_txt_'+str(myRand)+'.txt', 'w') as f:
@@ -289,8 +300,14 @@ for i in range(1000000): #1000000 generations should be plenty
 			f.write(str(mean_all_reward)+"\n")
 		with open('best_elite_rewards_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(mean_best_reward)+"\n")
+
 	if (i%200==2): # To create a timeline, like in Figure 3
 		with open('best_species_timeline_txt_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(super_actions[0]))
 			f.write("\n")
+
+	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+		max_idx = np.argmax(rewards_batch)
+		rectangles = rectsFromState(states_batch[max_idx])
+		plot_rectangles(rectangles, rewards_batch[max_idx], i)
 
