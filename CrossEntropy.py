@@ -76,7 +76,7 @@ def rectsFromState(state):
 	rects = []
 	i = 0
 	
-	while (i < DECISIONS*4):
+	while (i < DECISIONS):
 		rects.append(Rectangle( bottomLeft = ( min(state[i], state[i+1]), min(state[i+2], state[i+3]) ), topRight = ( max(state[i], state[i+1]), max(state[i+2], state[i+3]) ) ))
 		i += 4
 
@@ -286,19 +286,19 @@ for i in range(1000000): #1000000 generations should be plenty
 	print(	"Mean reward: " + str(mean_all_reward) + "\nSessgen: " + str(sessgen_time) + ", other: " + str(randomcomp_time) + ", select1: " + str(select1_time) + ", select2: " + str(select2_time) + ", select3: " + str(select3_time) +  ", fit: " + str(fit_time) + ", score: " + str(score_time)) 
 	
 	if (i%20 == 0): #Write all important info to files every 20 iterations
-		with open('best_species_pickle_'+str(myRand)+'.txt', 'wb') as fp:
+		with open('run_info/best_species_pickle_'+str(myRand)+'.txt', 'wb') as fp:
 			pickle.dump(super_actions, fp)
-		with open('best_species_txt_'+str(myRand)+'.txt', 'w') as f:
+		with open('run_info/best_species_txt_'+str(myRand)+'.txt', 'w') as f:
 			for item in super_actions:
 				f.write(str(item))
 				f.write("\n")
-		with open('best_species_rewards_'+str(myRand)+'.txt', 'w') as f:
+		with open('run_info/best_species_rewards_'+str(myRand)+'.txt', 'w') as f:
 			for item in super_rewards:
 				f.write(str(item))
 				f.write("\n")
-		with open('best_100_rewards_'+str(myRand)+'.txt', 'a') as f:
+		with open('run_info/best_100_rewards_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(mean_all_reward)+"\n")
-		with open('best_elite_rewards_'+str(myRand)+'.txt', 'a') as f:
+		with open('run_info/best_elite_rewards_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(mean_best_reward)+"\n")
 
 	if (i%200==2): # To create a timeline, like in Figure 3
@@ -306,8 +306,8 @@ for i in range(1000000): #1000000 generations should be plenty
 			f.write(str(super_actions[0]))
 			f.write("\n")
 
-	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+	'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		max_idx = np.argmax(rewards_batch)
 		rectangles = rectsFromState(states_batch[max_idx])
-		plot_rectangles(rectangles, rewards_batch[max_idx], i)
+		plot_rectangles(rectangles, rewards_batch[max_idx], i)'''
 
