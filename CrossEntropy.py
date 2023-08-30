@@ -13,11 +13,14 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import SGD, Adam
 from keras.models import load_model
+from keras.losses import CategoricalCrossentropy
 from statistics import mean
 import pickle
 import time
 import math
 import matplotlib.pyplot as plt
+
+from OptimalCuts import Rectangle, isDisjoint, optimalCuts
 
 N = 14  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
@@ -62,19 +65,31 @@ model.add(Dense(SECOND_LAYER_NEURONS, activation="relu"))
 model.add(Dense(THIRD_LAYER_NEURONS, activation="relu"))
 model.add(Dense(n_actions, activation="sigmoid"))  # Alternatively, we can add softmax to this later just to maintain numerical stability during training
 model.build((None, observation_space))
-model.compile(loss="categorical_crossentropy", optimizer=SGD(learning_rate = LEARNING_RATE)) #Adam optimizer also works well, with lower learning rate
+model.compile(loss=CategoricalCrossentropy, optimizer=SGD(learning_rate = LEARNING_RATE)) #Adam optimizer also works well, with lower learning rate
 
 print(model.summary())
 
 # Changes for N actions instead of 2 need to be incorporated 
 
 def calc_score(state):
-	"""
-	Reward function for your problem.
+	
+	# Reward function
+	rectangles = []
+	i = 0
+	
+	while (i < DECISIONS*4):
+		rectangles.append(Rectangle( bottomLeft = (state[i], state[i+1]), topRight = (state[i+2], state[i+3]) ))
+		i += 4
+	
+	# Apply optimal cuts algorithm
+	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))
+	
+	# If generated rectangles are not disjoint, return big negative reward
+	if (not optimalCutsResult[0]):
+		return -1000
 
-	"""
-
-	return -1
+	# For disjoint sets, reward is proportional to number of killed rectangles
+	return optimalCutsResult[2] - (N/2)
 
 
 def play_game(n_sessions, actions,state_next,states,prob, step, total_score):
