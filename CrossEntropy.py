@@ -27,8 +27,8 @@ N = 14  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions = 1000 # number of new sessions per iteration - batch size
-percentile = 50 # top 100-X percentile we are learning from
+n_sessions = 10000 # number of new sessions per iteration - batch size
+percentile = 60 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 region_bound = 100  # we will generate rectangles within a region enclosed by x = 0, x = 100, y = 0, y = 100
 
@@ -77,16 +77,26 @@ def rectsFromState(state):
 	i = 0
 	
 	while (i < DECISIONS):
+		
+		#the rectangle must not be a zero area rectangle
+		if (state[i] == state[i+1] or state[i+2] == state[i+3]):
+			return False, rects
+		
 		rects.append(Rectangle( bottomLeft = ( min(state[i], state[i+1]), min(state[i+2], state[i+3]) ), topRight = ( max(state[i], state[i+1]), max(state[i+2], state[i+3]) ) ))
 		i += 4
 
-	return rects
-	
+	return True, rects
 
 def calc_score(state):
 	
 	# Reward function
-	rectangles = rectsFromState(state)
+	rectsFromStateResult = rectsFromState(state)
+
+	# If some rectangles are zero area rectangles, return large negative reward
+	if (not rectsFromStateResult[0]):
+		return -20000
+
+	rectangles = rectsFromStateResult[1]
 	
 	# Apply optimal cuts algorithm
 	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))

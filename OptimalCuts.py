@@ -1,5 +1,7 @@
 from collections import namedtuple
 
+from plotGenerations import plot_rectangles
+
 # max number of cut through rectangles - this is a very safe upper bound as we are not going beyond n = 20
 INF = 10000
 
@@ -26,8 +28,6 @@ def isDisjoint(rect1, rect2):
     xInterval1, xInterval2, yInterval1, yInterval2 = (rect1.bottomLeft[0], rect1.topRight[0]), (rect2.bottomLeft[0], rect2.topRight[0]), (rect1.bottomLeft[1], rect1.topRight[1]), (rect2.bottomLeft[1], rect2.topRight[1])
     return not (intervalsIntersect(xInterval1, xInterval2) and intervalsIntersect(yInterval1, yInterval2))
 
-memo = {}   # storing DP results
-
 def optimalCuts(rects, reg):
     
     # rects is a list of all the rectangles
@@ -40,6 +40,8 @@ def optimalCuts(rects, reg):
         for j in range(i+1, len(rects)):
             if not isDisjoint(rects[i], rects[j]):
                 return (False, [], 0)
+            
+    memo = {}  # store DP Results
 
     # make sorted list of x and y coordinates of all rectangle boundary points
     x = set()
@@ -56,10 +58,10 @@ def optimalCuts(rects, reg):
 
     seq = []
 
-    result = findOptimalCuts(rects, x, y, reg, seq)
+    result = findOptimalCuts(rects, x, y, reg, seq, memo)
     return (True, result[0], result[1])
 
-def findOptimalCuts(rects, x, y, reg, seq):
+def findOptimalCuts(rects, x, y, reg, seq, memo):
 
     if len(rects) <= 3:
         return seq, 0
@@ -115,8 +117,8 @@ def findOptimalCuts(rects, x, y, reg, seq):
         regionLeft = Rectangle( bottomLeft = reg.bottomLeft, topRight = (x[i], reg.topRight[1]) )
         regionRight = Rectangle( bottomLeft = (x[i], reg.bottomLeft[1]), topRight = reg.topRight )
 
-        seqLeft, killedLeft = findOptimalCuts(rectsLeft, xLeft, yLeft, regionLeft, seq)
-        seqRight, killedRight = findOptimalCuts(rectsRight, xRight, yRight, regionRight, seq)
+        seqLeft, killedLeft = findOptimalCuts(rectsLeft, xLeft, yLeft, regionLeft, seq, memo)
+        seqRight, killedRight = findOptimalCuts(rectsRight, xRight, yRight, regionRight, seq, memo)
 
         cuts[i-1] = killedLeft + killedRight + currentKilled
         sequences.append(seq + seqLeft + seqRight)
@@ -163,8 +165,8 @@ def findOptimalCuts(rects, x, y, reg, seq):
         regionBelow = Rectangle( bottomLeft = reg.bottomLeft, topRight = (reg.topRight[0], y[i]) )
         regionAbove = Rectangle( bottomLeft = (reg.bottomLeft[0], y[i]), topRight = reg.topRight )
 
-        seqBelow, killedBelow = findOptimalCuts(rectsBelow, xBelow, yBelow, regionBelow, seq)
-        seqAbove, killedAbove = findOptimalCuts(rectsAbove, xAbove, yAbove, regionAbove, seq)
+        seqBelow, killedBelow = findOptimalCuts(rectsBelow, xBelow, yBelow, regionBelow, seq, memo)
+        seqAbove, killedAbove = findOptimalCuts(rectsAbove, xAbove, yAbove, regionAbove, seq, memo)
 
         cuts[len(x) - 2 + i - 1] = killedBelow  + killedAbove + currentKilled
         sequences.append(seq + seqBelow + seqAbove)
@@ -182,8 +184,28 @@ def findOptimalCuts(rects, x, y, reg, seq):
         newLine = AxisParallelLine( point = x[1 + minPtr], axis = 'x' )
 
     else:
-        newLine = AxisParallelLine( point = y[minPtr + 1 - len(x) - 2], axis = 'y' )
+        newLine = AxisParallelLine( point = y[minPtr + 3 - len(x)], axis = 'y' )
 
     # Add to memo and return
-    memo[reg] = ([reg, newLine] + sequences[minPtr], cuts[minPtr])
+    try:
+        memo[reg] = ([reg, newLine] + sequences[minPtr], cuts[minPtr])
+    except:
+        print(f"minPtr is {minPtr} and sequences list has size {len(sequences)} and cuts has size {len(cuts)}")
+
     return [reg, newLine] + sequences[minPtr], cuts[minPtr]
+
+# validate optimal cuts algorithm - 9 rectangle pinwheel
+
+rectangles = []
+rectangles.append(Rectangle( bottomLeft = (0,0), topRight = (1,4) ))
+rectangles.append(Rectangle( bottomLeft = (0,4), topRight = (4,5) ))
+rectangles.append(Rectangle( bottomLeft = (1,0), topRight = (2,3) ))
+rectangles.append(Rectangle( bottomLeft = (2,0), topRight = (5,1) ))
+rectangles.append(Rectangle( bottomLeft = (2,1), topRight = (4,2) ))
+rectangles.append(Rectangle( bottomLeft = (2,2), topRight = (3,3) ))
+rectangles.append(Rectangle( bottomLeft = (3,2), topRight = (4,4) ))
+rectangles.append(Rectangle( bottomLeft = (4,1), topRight = (5,5) ))
+rectangles.append(Rectangle( bottomLeft = (1,3), topRight = (3,4) ))
+plot_rectangles(rectangles, 2, 0, 0, 6)
+
+print(optimalCuts(rectangles, Rectangle(bottomLeft=(0,0), topRight=(100,100))))
