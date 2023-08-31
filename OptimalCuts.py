@@ -24,7 +24,7 @@ def lineIntersectsRectangle(line, rect):
 
 def isDisjoint(rect1, rect2):
     xInterval1, xInterval2, yInterval1, yInterval2 = (rect1.bottomLeft[0], rect1.topRight[0]), (rect2.bottomLeft[0], rect2.topRight[0]), (rect1.bottomLeft[1], rect1.topRight[1]), (rect2.bottomLeft[1], rect2.topRight[1])
-    return intervalsIntersect(xInterval1, xInterval2) and intervalsIntersect(yInterval1, yInterval2)
+    return not (intervalsIntersect(xInterval1, xInterval2) and intervalsIntersect(yInterval1, yInterval2))
 
 memo = {}   # storing DP results
 
@@ -104,11 +104,13 @@ def findOptimalCuts(rects, x, y, reg, seq):
         for rect in rectsLeft:
             yLeft.add(rect.bottomLeft[1])
             yLeft.add(rect.topRight[1])
+        yLeft = sorted(list(yLeft))
 
         yRight = set()
         for rect in rectsRight:
             yRight.add(rect.bottomLeft[1])
             yRight.add(rect.topRight[1])
+        yRight = sorted(list(yRight))
 
         regionLeft = Rectangle( bottomLeft = reg.bottomLeft, topRight = (x[i], reg.topRight[1]) )
         regionRight = Rectangle( bottomLeft = (x[i], reg.bottomLeft[1]), topRight = reg.topRight )
@@ -150,11 +152,13 @@ def findOptimalCuts(rects, x, y, reg, seq):
         for rect in rectsBelow:
             xBelow.add(rect.bottomLeft[0])
             xBelow.add(rect.topRight[0])
+        xBelow = sorted(list(xBelow))
 
         xAbove = set()
         for rect in rectsAbove:
             xAbove.add(rect.bottomLeft[0])
             xAbove.add(rect.topRight[0])
+        xAbove = sorted(list(xAbove))
 
         regionBelow = Rectangle( bottomLeft = reg.bottomLeft, topRight = (reg.topRight[0], y[i]) )
         regionAbove = Rectangle( bottomLeft = (reg.bottomLeft[0], y[i]), topRight = reg.topRight )
@@ -162,7 +166,7 @@ def findOptimalCuts(rects, x, y, reg, seq):
         seqBelow, killedBelow = findOptimalCuts(rectsBelow, xBelow, yBelow, regionBelow, seq)
         seqAbove, killedAbove = findOptimalCuts(rectsAbove, xAbove, yAbove, regionAbove, seq)
 
-        cuts[len(x) + i - 1] = killedBelow  + killedAbove + currentKilled
+        cuts[len(x) - 2 + i - 1] = killedBelow  + killedAbove + currentKilled
         sequences.append(seq + seqBelow + seqAbove)
 
     minPtr = 0
@@ -178,7 +182,7 @@ def findOptimalCuts(rects, x, y, reg, seq):
         newLine = AxisParallelLine( point = x[1 + minPtr], axis = 'x' )
 
     else:
-        newLine = AxisParallelLine( point = y[minPtr - len(x) - 2], axis = 'y' )
+        newLine = AxisParallelLine( point = y[minPtr + 1 - len(x) - 2], axis = 'y' )
 
     # Add to memo and return
     memo[reg] = ([reg, newLine] + sequences[minPtr], cuts[minPtr])
