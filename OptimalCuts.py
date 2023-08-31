@@ -37,7 +37,7 @@ def optimalCuts(rects, reg):
 
     # check if rectangle set is pairwise disjoint
     for i in range(len(rects)):
-        for j in range(i, len(rects)):
+        for j in range(i+1, len(rects)):
             if not isDisjoint(rects[i], rects[j]):
                 return (False, [], 0)
 

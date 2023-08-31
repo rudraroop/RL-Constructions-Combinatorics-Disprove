@@ -27,8 +27,8 @@ N = 14  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions =1000 # number of new sessions per iteration - batch size
-percentile = 75 # top 100-X percentile we are learning from
+n_sessions = 1000 # number of new sessions per iteration - batch size
+percentile = 50 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 region_bound = 100  # we will generate rectangles within a region enclosed by x = 0, x = 100, y = 0, y = 100
 
