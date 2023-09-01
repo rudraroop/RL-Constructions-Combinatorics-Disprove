@@ -125,9 +125,9 @@ def play_one_game(agent, begin_state, states, actions, episode_scores, final_gen
 		cur_state[DECISIONS + decision_idx] = 1
 		game_states.append(cur_state)
 		# get probability distribution over actions based on current state
-		prob = agent.predict(cur_state)
+		prob = agent.predict(np.array([cur_state]))
 		# generate integer action from [0, 100) based on probability scores
-		action = np.random.choice(a = n_actions, p = prob)
+		action = np.random.choice(a = n_actions, p = prob[0])
 		game_actions.append(action)
 		len_game += 1
 		
@@ -176,10 +176,10 @@ def play_one_game(agent, begin_state, states, actions, episode_scores, final_gen
 
 def generate_session_sequential(agent, n_sessions, verbose = 1):
 	
-	states = np.array([])
-	actions = np.array([])
-	episode_scores = np.array([])
-	final_generations = np.array([])
+	states = []
+	actions = []
+	episode_scores = []
+	final_generations = []
 
 	for episode_idx in range(n_sessions):
 		begin_state = np.zeros(state_dim, dtype = int)
@@ -249,15 +249,18 @@ def select_super_sessions(states_batch, actions_batch, rewards_batch, percentile
 	return super_states, super_actions, super_rewards
 	
 
-super_states =  np.empty((0,len_game,observation_space), dtype = int)	# this can be deleted - we will see how to handle this
+#super_states =  np.empty((0,len_game,observation_space), dtype = int)	# this can be deleted - we will see how to handle this
 super_actions = np.array([], dtype = int)
 super_rewards = np.array([])
 sessgen_time = 0
 fit_time = 0
 score_time = 0
 
+result = generate_session_sequential(model, 1, 0)
+print(result[3])
+print(result[2])
 
-
+'''
 myRand = random.randint(0,1000) #used in the filename
 
 for i in range(1000000): #1000000 generations should be plenty
@@ -340,8 +343,11 @@ for i in range(1000000): #1000000 generations should be plenty
 		with open('best_species_timeline_txt_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(super_actions[0]))
 			f.write("\n")
+'''
 
-	'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+
+
+'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		max_idx = np.argmax(rewards_batch)
 		rectangles = rectsFromState(states_batch[max_idx])
 		plot_rectangles(rectangles, rewards_batch[max_idx], i)'''
