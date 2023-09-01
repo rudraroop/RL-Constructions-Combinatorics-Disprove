@@ -104,10 +104,11 @@ def calc_score_variable_length(state, len_game, decision_idx):
 	
 	# If generated rectangles are not disjoint, return big negative reward
 	if (not optimalCutsResult[0]):
-		return - 1000 - delay_factor 
+		return - 2000 - (delay_factor/4) 
 
 	# For disjoint sets, reward is proportional to number of killed rectangles
-	return (2*optimalCutsResult[2]) - (delay_factor/4)
+	# return (8*optimalCutsResult[2]) - (delay_factor/8)
+	return optimalCutsResult[2]	# for now just observe this value
 	
 
 def play_one_game(agent, begin_state, states, actions, episode_scores, final_generations):
