@@ -54,7 +54,7 @@ observation_space = 2*DECISIONS #Leave this at 2*DECISIONS. The input vector wil
 						  #So e.g. [10.0,12.3,0,0,   0,0,1,0] means we have the partial word 10.0,12.3 and we are considering the third letter now.
 						  #If this doesn't work, we can supply interval graph data to the neural network as state information
 
-len_game = DECISIONS 
+#len_game = DECISIONS 
 state_dim = (observation_space,)
 
 INF = 1000000
@@ -87,86 +87,111 @@ def rectsFromState(state):
 
 	return True, rects
 
-def calc_score(state):
-	
+def calc_score_variable_length(state, len_game, decision_idx):
+
+	if (decision_idx != DECISIONS):
+		# generation wasn't completed, return very large negative reward
+		return -10000
+
 	# Reward function
 	rectsFromStateResult = rectsFromState(state)
-
-	# If some rectangles are zero area rectangles, return large negative reward
-	if (not rectsFromStateResult[0]):
-		return -20000
-
 	rectangles = rectsFromStateResult[1]
 	
+	delay_factor = len_game - DECISIONS
+
 	# Apply optimal cuts algorithm
 	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))
 	
 	# If generated rectangles are not disjoint, return big negative reward
 	if (not optimalCutsResult[0]):
-		return -1000
+		return - 1000 - delay_factor 
 
 	# For disjoint sets, reward is proportional to number of killed rectangles
-	return optimalCutsResult[2]
+	return (2*optimalCutsResult[2]) - (delay_factor/4)
+	
 
+def play_one_game(agent, begin_state, states, actions, episode_scores, final_generations):
+	
+	decision_idx = 0
+	cur_state = begin_state
+	prev_decision = -1
+	len_game = 0
 
-def play_game(n_sessions, actions,state_next,states,prob, step, total_score):
-	# plays one step concurrently for each of the n active sessions being made by generate_sessions
-	for i in range(n_sessions):
-		
+	game_states = []
+	game_actions = []
+
+	while (decision_idx < DECISIONS and len_game < DECISIONS*100):
+		# make sure state has decision information
+		cur_state[DECISIONS + decision_idx] = 1
+		game_states.append(cur_state)
+		# get probability distribution over actions based on current state
+		prob = agent.predict(cur_state)
 		# generate integer action from [0, 100) based on probability scores
-		action = np.random.choice(a = n_actions, p = prob[i])
+		action = np.random.choice(a = n_actions, p = prob)
+		game_actions.append(action)
+		len_game += 1
 		
-		actions[i][step-1] = action
-		state_next[i] = states[i,:,step-1]
-		state_next[i][step-1] = action	# supply state with current action taken
-		state_next[i][DECISIONS + step-1] = 0 # current action already taken
-		
-		if (step < DECISIONS):	# doesn't make sense to make the next action position 1 if already terminal
-			state_next[i][DECISIONS + step] = 1			
-		#calculate final score
-		terminal = step == DECISIONS
-		if terminal:
-			total_score[i] = calc_score(state_next[i])
-	
-		# record sessions 
-		if not terminal:
-			states[i,:,step] = state_next[i]
-		
-	return actions, state_next,states, total_score, terminal	
-					
+		if (decision_idx % 4 == 1):
+			# x2 is being generated, hence check if same as x1
+			if (not prev_decision == action):
+				# action is valid, doesn't cause a zero area rectangle to be generated - change state
+				cur_state[decision_idx] = action
+				cur_state[DECISIONS + decision_idx] = 0
+				# record action as new prev_decision
+				prev_decision = action
+				# increment decision index
+				decision_idx += 1
+				
+		elif (decision_idx % 4 == 3):
+			# y2 is being generated, hence check if same as y1
+			if (not prev_decision == action):
+				# action is valid, doesn't cause a zero area rectangle to be generated - change state
+				cur_state[decision_idx] = action
+				cur_state[DECISIONS + decision_idx] = 0
+				# record action as new prev_decision
+				prev_decision = action
+				# increment decision index
+				decision_idx += 1
 
-def generate_session(agent, n_sessions, verbose = 1):	
-	"""
-	Play n_session games using agent neural network.
-	Terminate when games finish 
+		else:
+			# any action is valid, change state
+			cur_state[decision_idx] = action
+			cur_state[DECISIONS + decision_idx] = 0
+			# record action as new prev_decision
+			prev_decision = action
+			# increment decision index
+			decision_idx += 1	
+
+	# episode terminated, compute reward
+	score = calc_score_variable_length(cur_state, len_game, decision_idx)
+
+	# add information to session arrays
+	states.append(np.array(game_states))
+	actions.append(np.array(game_actions))
+	episode_scores.append(score)
+	final_generations.append(cur_state)
+
+	return game_states, game_actions, score, cur_state
 	
-	Code inspired by https://github.com/yandexdataschool/Practical_RL/blob/master/week01_intro/deep_crossentropy_method.ipynb
-	"""
-	states =  np.zeros([n_sessions, observation_space, len_game], dtype=int) # all states encountered in all sessions
-	actions = np.zeros([n_sessions, len_game], dtype = int)	 # all actions taken in all sessions
-	state_next = np.zeros([n_sessions,observation_space], dtype = int) # current state of each session
-	prob = np.zeros(n_sessions) # action probabilities for current state of each session
-	states[:,DECISIONS,0] = 1
-	step = 0
-	total_score = np.zeros([n_sessions])
-	pred_time = 0
-	play_time = 0
+
+def generate_session_sequential(agent, n_sessions, verbose = 1):
 	
-	while (True):
-		step += 1		
-		tic = time.time()
-		prob = agent.predict(states[:,:,step-1], batch_size = n_sessions) 
-		pred_time += time.time()-tic
-		tic = time.time()
-		actions, state_next,states, total_score, terminal = play_game(n_sessions, actions,state_next,states,prob, step, total_score)
-		play_time += time.time()-tic
-		
-		if terminal:
-			break
-	if (verbose):
-		print("Predict: "+str(pred_time)+", play: " + str(play_time))
-	return states, actions, total_score
-	
+	states = np.array([])
+	actions = np.array([])
+	episode_scores = np.array([])
+	final_generations = np.array([])
+
+	for episode_idx in range(n_sessions):
+		begin_state = np.zeros(state_dim, dtype = int)
+		play_one_game(agent, begin_state, states, actions, episode_scores, final_generations)
+
+	states = np.array(states)
+	actions = np.array(actions)
+	episode_scores = np.array(episode_scores)
+	final_generations = np.array(final_generations)
+
+	return states, actions, episode_scores, final_generations
+
 
 def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
 	"""
@@ -224,7 +249,7 @@ def select_super_sessions(states_batch, actions_batch, rewards_batch, percentile
 	return super_states, super_actions, super_rewards
 	
 
-super_states =  np.empty((0,len_game,observation_space), dtype = int)
+super_states =  np.empty((0,len_game,observation_space), dtype = int)	# this can be deleted - we will see how to handle this
 super_actions = np.array([], dtype = int)
 super_rewards = np.array([])
 sessgen_time = 0
@@ -246,7 +271,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	states_batch = np.array(sessions[0], dtype = int)
 	actions_batch = np.array(sessions[1], dtype = int)
 	rewards_batch = np.array(sessions[2])
-	states_batch = np.transpose(states_batch,axes=[0,2,1])
+	states_batch = np.transpose(states_batch,axes=[0,2,1]) # this will not be necessary for sequentially generated sessions
 	
 	states_batch = np.append(states_batch,super_states,axis=0)
 
