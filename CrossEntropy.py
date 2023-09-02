@@ -27,8 +27,8 @@ N = 14  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions = 10000 # number of new sessions per iteration - batch size
-percentile = 60 # top 100-X percentile we are learning from
+n_sessions = 400 # number of new sessions per iteration - batch size
+percentile = 70 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 region_bound = 100  # we will generate rectangles within a region enclosed by x = 0, x = 100, y = 0, y = 100
 
@@ -40,6 +40,10 @@ region_bound = 100  # we will generate rectangles within a region enclosed by x 
 FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
+
+# Reward function control parameters
+disjoint_penalty = -2000
+long_episode_penalty = -10000
 
 # At each step, the agent must pick an action which is an integer between 0 and 100
 n_actions = 100
@@ -91,20 +95,20 @@ def calc_score_variable_length(state, len_game, decision_idx):
 
 	if (decision_idx != DECISIONS):
 		# generation wasn't completed, return very large negative reward
-		return -10000
+		return long_episode_penalty
 
 	# Reward function
 	rectsFromStateResult = rectsFromState(state)
 	rectangles = rectsFromStateResult[1]
 	
-	delay_factor = len_game - DECISIONS
+	delay_factor = (len_game - DECISIONS)/4
 
 	# Apply optimal cuts algorithm
 	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))
 	
 	# If generated rectangles are not disjoint, return big negative reward
 	if (not optimalCutsResult[0]):
-		return - 2000 - (delay_factor/4) 
+		return disjoint_penalty - delay_factor
 
 	# For disjoint sets, reward is proportional to number of killed rectangles
 	# return (8*optimalCutsResult[2]) - (delay_factor/8)
@@ -124,7 +128,7 @@ def play_one_game(agent, begin_state, states, actions, episode_scores, final_gen
 	while (decision_idx < DECISIONS and len_game < DECISIONS*100):
 		# make sure state has decision information
 		cur_state[DECISIONS + decision_idx] = 1
-		game_states.append(cur_state)
+		game_states.append(np.array(cur_state))
 		# get probability distribution over actions based on current state
 		prob = agent.predict(np.array([cur_state]))
 		# generate integer action from [0, 100) based on probability scores
@@ -186,8 +190,8 @@ def generate_session_sequential(agent, n_sessions, verbose = 1):
 		begin_state = np.zeros(state_dim, dtype = int)
 		play_one_game(agent, begin_state, states, actions, episode_scores, final_generations)
 
-	states = np.array(states)
-	actions = np.array(actions)
+	states = np.array(states, dtype=object)
+	actions = np.array(actions, dtype=object)
 	episode_scores = np.array(episode_scores)
 	final_generations = np.array(final_generations)
 
@@ -220,7 +224,7 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
 				for item in actions_batch[i]:
 					elite_actions.append(item)			
 			counter -= 1
-	elite_states = np.array(elite_states, dtype = int)	
+	elite_states = np.array(elite_states, dtype = object)	
 	elite_actions = np.array(elite_actions, dtype = int)	
 	return elite_states, elite_actions
 	
@@ -244,44 +248,60 @@ def select_super_sessions(states_batch, actions_batch, rewards_batch, percentile
 				super_actions.append(actions_batch[i])
 				super_rewards.append(rewards_batch[i])
 				counter -= 1
-	super_states = np.array(super_states, dtype = int)
-	super_actions = np.array(super_actions, dtype = int)
+	super_states = np.array(super_states, dtype = object)
+	super_actions = np.array(super_actions, dtype = object)
 	super_rewards = np.array(super_rewards)
 	return super_states, super_actions, super_rewards
 	
 
 #super_states =  np.empty((0,len_game,observation_space), dtype = int)	# this can be deleted - we will see how to handle this
+super_states = np.array([], dtype = int)
 super_actions = np.array([], dtype = int)
 super_rewards = np.array([])
 sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-result = generate_session_sequential(model, 1, 0)
-print(result[3])
-print(result[2])
+'''result = generate_session_sequential(model, 4, 0)
+print(result[0])
 
-'''
+super_sessions_results = select_super_sessions(result[0], result[1], result[2], 25)
+print(super_sessions_results[0])
+
+states_batch = np.append(result[0],super_sessions_results[0],axis=0)
+print(states_batch)'''
+
 myRand = random.randint(0,1000) #used in the filename
 
-for i in range(1000000): #1000000 generations should be plenty
+for i in range(100000): #1000000 generations should be plenty - 100000 for now
 	#generate new sessions
 	#performance can be improved with joblib
 	tic = time.time()
-	sessions = generate_session(model,n_sessions,0) #change 0 to 1 to print out how much time each step in generate_session takes 
+	sessions = generate_session_sequential(model,n_sessions,0) #change 0 to 1 to print out how much time each step in generate_session takes 
 	sessgen_time = time.time()-tic
 	tic = time.time()
 	
-	states_batch = np.array(sessions[0], dtype = int)
-	actions_batch = np.array(sessions[1], dtype = int)
+	states_batch = np.array(sessions[0], dtype = object)
+	actions_batch = np.array(sessions[1], dtype = object)
 	rewards_batch = np.array(sessions[2])
-	states_batch = np.transpose(states_batch,axes=[0,2,1]) # this will not be necessary for sequentially generated sessions
+	#states_batch = np.transpose(states_batch,axes=[0,2,1]) # this will not be necessary for sequentially generated sessions
 	
-	states_batch = np.append(states_batch,super_states,axis=0)
+	#print(f"States batch is {states_batch}")
+	#print(f"Super states is {super_states}")
+	#states_batch = np.append(states_batch,super_states,axis=0)
+	for state in super_states:
+		np.append(states_batch, state)
+
+	#print(f"States batch after append is {states_batch}")
 
 	if i>0:
-		actions_batch = np.append(actions_batch,np.array(super_actions),axis=0)	
+		for action in super_actions:
+			np.append(actions_batch, action)
+		#print(f"Actions batch after append is {actions_batch}")
+		#actions_batch = np.append(actions_batch,np.array(super_actions),axis=0)	
+
 	rewards_batch = np.append(rewards_batch,super_rewards)
+	#print(f"Rewards batch after append is {rewards_batch}")
 		
 	randomcomp_time = time.time()-tic 
 	tic = time.time()
@@ -310,6 +330,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	tic = time.time()
 	
 	super_states = [super_sessions[i][0] for i in range(len(super_sessions))]
+	#super_states = np.array(super_states, dtype=object)
 	super_actions = [super_sessions[i][1] for i in range(len(super_sessions))]
 	super_rewards = [super_sessions[i][2] for i in range(len(super_sessions))]
 	
@@ -344,8 +365,6 @@ for i in range(1000000): #1000000 generations should be plenty
 		with open('best_species_timeline_txt_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(super_actions[0]))
 			f.write("\n")
-'''
-
 
 
 '''if (i%50 == 0):	# Make a plot of best generation every 50th iteration

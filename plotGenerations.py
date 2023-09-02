@@ -15,3 +15,22 @@ def plot_rectangles(rects, score, idx, min, max):
     
     fig.savefig('plots/rects_'+str(idx)+'.png')
     plt.close(fig)
+'''
+states = np.zeros([4,4,2], dtype=int)
+state_next = np.zeros([4,4])
+state_next[0][0] = 1
+state_next[0][1] = 2
+state_next[0][2] = 3
+state_next[0][3] = 4
+state_next[1][0] = 5
+state_next[1][1] = 6
+state_next[1][2] = 7
+state_next[1][3] = 8
+states[0,:,0] = state_next[0]
+states[1,:,0] = state_next[1]
+print(state_next)
+print(states)
+states_batch = np.transpose(states,axes=[0,2,1])
+print("After transpose, states are: ")
+print(states_batch)
+'''

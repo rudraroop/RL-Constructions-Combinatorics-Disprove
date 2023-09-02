@@ -208,4 +208,4 @@ rectangles.append(Rectangle( bottomLeft = (4,1), topRight = (5,5) ))
 rectangles.append(Rectangle( bottomLeft = (1,3), topRight = (3,4) ))
 plot_rectangles(rectangles, 2, 0, 0, 6)
 
-print(optimalCuts(rectangles, Rectangle(bottomLeft=(0,0), topRight=(100,100))))
+#print(optimalCuts(rectangles, Rectangle(bottomLeft=(0,0), topRight=(100,100))))
