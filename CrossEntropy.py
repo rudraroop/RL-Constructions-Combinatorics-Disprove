@@ -23,14 +23,13 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 14  # Number of rectangles to be generated
+N = 7  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions = 10000 # number of new sessions per iteration - batch size
+n_sessions = 1000 # number of new sessions per iteration - batch size
 percentile = 60 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
-region_bound = 100  # we will generate rectangles within a region enclosed by x = 0, x = 100, y = 0, y = 100
 
 # The original work revolves around generating a binary or n-ary sentence encoding
 # However, here our action space is a continuous, finite interval from which any float number could be picked
@@ -41,18 +40,18 @@ FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 
-# At each step, the agent must pick an action which is an integer between 0 and 100
+# At each step, the agent must pick an action which is an integer between 0 and 200
 n_actions = 100
+region_bound = n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
+
 # Note for later:
 # In case this is not exhaustive enough, we can either increase actions or divide this into 100 intervals of 
 # length 1 each: 0-1, 1-2, ... 99-100 - The neural net will produce three numbers corresponding to each interval 
 # # (P, M, V) - where P is the probability of picking a particular interval
 # Within each interval, the number picked will be sampled from a Gaussian Distribution with mean = M and variance = V
 
-observation_space = 2*DECISIONS #Leave this at 2*DECISIONS. The input vector will have size 2*DECISIONS, where the first DECISIONS letters encode our partial word (with zeros on
-						  #the positions we haven't considered yet), and the next DECISIONS bits one-hot encode which letter we are considering now.
-						  #So e.g. [10.0,12.3,0,0,   0,0,1,0] means we have the partial word 10.0,12.3 and we are considering the third letter now.
-						  #If this doesn't work, we can supply interval graph data to the neural network as state information
+observation_space = (n_actions + 1) * DECISIONS    # The state representation will have N*4 decisions, each decision
+# is an action that will be one-hot-encoded within n actions. 
 
 len_game = DECISIONS 
 state_dim = (observation_space,)
@@ -77,12 +76,21 @@ def rectsFromState(state):
 	i = 0
 	
 	while (i < DECISIONS):
+
+		rect = [-1, -1, -1, -1]
+
+		for k in range(n_actions):
+			#look for x1
+			if state[i*(n_actions) + k] == 1 : rect[0] = k
+			if state[i*(n_actions) + n_actions + k] == 1 : rect[1] = k
+			if state[i*(n_actions) + (2*n_actions) + k] == 1 : rect[2] = k
+			if state[i*(n_actions) + (3*n_actions) + k] == 1 : rect[3] = k
 		
 		#the rectangle must not be a zero area rectangle
-		if (state[i] == state[i+1] or state[i+2] == state[i+3]):
+		if (rect[0] == rect[1] or rect[2] == rect[3]):
 			return False, rects
 		
-		rects.append(Rectangle( bottomLeft = ( min(state[i], state[i+1]), min(state[i+2], state[i+3]) ), topRight = ( max(state[i], state[i+1]), max(state[i+2], state[i+3]) ) ))
+		rects.append(Rectangle( bottomLeft = ( min(rect[0], rect[1]), min(rect[2], rect[3]) ), topRight = ( max(rect[0], rect[1]), max(rect[2], rect[3]) ) ))
 		i += 4
 
 	return True, rects
@@ -99,7 +107,7 @@ def calc_score(state):
 	rectangles = rectsFromStateResult[1]
 	
 	# Apply optimal cuts algorithm
-	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (100, 100)))
+	optimalCutsResult = optimalCuts(rectangles, Rectangle( bottomLeft = (0,0), topRight = (region_bound, region_bound)))
 	
 	# If generated rectangles are not disjoint, return big negative reward
 	if (not optimalCutsResult[0]):
@@ -109,20 +117,21 @@ def calc_score(state):
 	return optimalCutsResult[2]
 
 
-def play_game(n_sessions, actions,state_next,states,prob, step, total_score):
+def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 	# plays one step concurrently for each of the n active sessions being made by generate_sessions
 	for i in range(n_sessions):
 		
-		# generate integer action from [0, 100) based on probability scores
+		# generate integer action from [0, n_actions) based on probability scores
 		action = np.random.choice(a = n_actions, p = prob[i])
 		
 		actions[i][step-1] = action
-		state_next[i] = states[i,:,step-1]
-		state_next[i][step-1] = action	# supply state with current action taken
-		state_next[i][DECISIONS + step-1] = 0 # current action already taken
+		state_next[i] = states[i,:,step-1]	# get current state representation
+		state_next[i][ (n_actions*(step-1)) + action ] = 1	# supply state with current action taken
+		state_next[i][ (n_actions*DECISIONS) + step-1 ] = 0 # current action already taken
 		
 		if (step < DECISIONS):	# doesn't make sense to make the next action position 1 if already terminal
-			state_next[i][DECISIONS + step] = 1			
+			state_next[i][ (n_actions*DECISIONS) + step] = 1			
+		
 		#calculate final score
 		terminal = step == DECISIONS
 		if terminal:
@@ -165,7 +174,8 @@ def generate_session(agent, n_sessions, verbose = 1):
 			break
 	if (verbose):
 		print("Predict: "+str(pred_time)+", play: " + str(play_time))
-	return states, actions, total_score
+	#last returned variable is meant to return the final generation
+	return states, actions, total_score, state_next 
 	
 
 def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
@@ -231,9 +241,32 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
+sessions = generate_session(model,1,0)	# Play one episode and evaluate it
 
+states_batch = np.array(sessions[0], dtype = int)
+actions_batch = np.array(sessions[1], dtype = int)
+rewards_batch = np.array(sessions[2])
+states_batch = np.transpose(states_batch,axes=[0,2,1])
 
-myRand = random.randint(0,1000) #used in the filename
+print(sessions[3])
+print(actions_batch)
+
+print()
+
+rectsGenerated = rectsFromState(sessions[3][0])
+print(rectsGenerated)
+
+print()
+
+if (rectsGenerated[0]):
+	# Not zero-area
+	result = optimalCuts(rectsGenerated[1], Rectangle( bottomLeft = (0,0), topRight = (region_bound, region_bound)))
+	print(calc_score(sessions[3][0]))
+	plot_rectangles(rectsGenerated[1], result[2], 1, 0, 200)
+	print("On applying the cutting algorithm we find")
+	print(result)
+
+myRand = 1 # run number used in the filename
 
 for i in range(1000000): #1000000 generations should be plenty
 	#generate new sessions
@@ -315,8 +348,8 @@ for i in range(1000000): #1000000 generations should be plenty
 		with open('best_species_timeline_txt_'+str(myRand)+'.txt', 'a') as f:
 			f.write(str(super_actions[0]))
 			f.write("\n")
-
-	'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+			
+'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		max_idx = np.argmax(rewards_batch)
 		rectangles = rectsFromState(states_batch[max_idx])
 		plot_rectangles(rectangles, rewards_batch[max_idx], i)'''
