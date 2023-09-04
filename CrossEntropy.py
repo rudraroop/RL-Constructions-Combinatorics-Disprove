@@ -20,10 +20,10 @@ import time
 import math
 import matplotlib.pyplot as plt
 
-from OptimalCuts import Rectangle, optimalCuts
+from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 9  # Number of rectangles to be generated
+N = 4  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
@@ -52,8 +52,8 @@ region_bound = n_actions  # we will generate rectangles within a region enclosed
 # # (P, M, V) - where P is the probability of picking a particular interval
 # Within each interval, the number picked will be sampled from a Gaussian Distribution with mean = M and variance = V
 
-observation_space = (n_actions + 1) * DECISIONS    # The state representation will have N*4 decisions, each decision
-# is an action that will be one-hot-encoded within n actions. 
+observation_space = (n_actions * DECISIONS) + ( 2 * N * N ) + DECISIONS  # The state representation will have N*4 decisions, 2 N*N interval graph 
+# representation and a one hot encoding of the current decision
 
 len_game = DECISIONS 
 state_dim = (observation_space,)
@@ -129,10 +129,30 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 		actions[i][step-1] = action
 		state_next[i] = states[i,:,step-1]	# get current state representation
 		state_next[i][ (n_actions*(step-1)) + action ] = 1	# supply state with current action taken
-		state_next[i][ (n_actions*DECISIONS) + step-1 ] = 0 # current action already taken
+		state_next[i][ (n_actions*DECISIONS) + (2*N*N) + step-1 ] = 0 # current action already taken
+
+		if (step%4 == 2):
+			# fill in x interval graph
+			action_index = 0
+			curInterval = ( min(actions[i][step-2], actions[i][step-1]), max(actions[i][step-2], actions[i][step-1]) )
+			while (action_index < step):
+				if (intervalsIntersect( ( min(actions[i][action_index], actions[i][action_index + 1]), max(actions[i][action_index], actions[i][action_index + 1]) ) , curInterval)):
+					state_next[i][ (n_actions * DECISIONS) + ( action_index // 4 ) + ( N * ( (step-1) // 4 ) ) ] = 1
+					state_next[i][ (n_actions * DECISIONS) + ( N * ( action_index // 4 ) ) + ( (step-1) // 4 ) ] = 1
+				action_index += 4
 		
+		if (step%4 == 0):
+			# fill in y interval graph
+			action_index = 2
+			curInterval = ( min(actions[i][step-2], actions[i][step-1]), max(actions[i][step-2], actions[i][step-1]) )
+			while (action_index < step):
+				if (intervalsIntersect( ( min(actions[i][action_index], actions[i][action_index + 1]), max(actions[i][action_index], actions[i][action_index + 1]) ) , curInterval)):
+					state_next[i][ (n_actions * DECISIONS) + (N * N) + ( N * ( action_index // 4 ) ) + ( (step-1) // 4 ) ] = 1
+					state_next[i][ (n_actions * DECISIONS) + (N * N) + ( action_index // 4 ) + ( N * ( (step-1) // 4 ) ) ] = 1
+				action_index += 4
+
 		if (step < DECISIONS):	# doesn't make sense to make the next action position 1 if already terminal
-			state_next[i][ (n_actions*DECISIONS) + step] = 1			
+			state_next[i][ (n_actions*DECISIONS) + (2*N*N) + step] = 1			
 		
 		#calculate final score
 		terminal = step == DECISIONS
@@ -157,7 +177,7 @@ def generate_session(agent, n_sessions, verbose = 1):
 	actions = np.zeros([n_sessions, len_game], dtype = int)	 # all actions taken in all sessions
 	state_next = np.zeros([n_sessions,observation_space], dtype = int) # current state of each session
 	prob = np.zeros(n_sessions) # action probabilities for current state of each session
-	states[:,DECISIONS,0] = 1
+	states[:,(n_actions*DECISIONS) + (2*N*N),0] = 1
 	step = 0
 	total_score = np.zeros([n_sessions])
 	pred_time = 0
@@ -250,10 +270,9 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 5 # run number used in the filename
+myRand = 1 # run number used in the filename
 
-'''
-sessions = generate_session(model,100,0)	# Play one episode and evaluate it
+sessions = generate_session(model,1,0)	# Play one episode and evaluate it
 
 states_batch = np.array(sessions[0], dtype = int)
 actions_batch = np.array(sessions[1], dtype = int)
@@ -261,10 +280,15 @@ rewards_batch = np.array(sessions[2])
 generations_batch = np.array(sessions[3])
 states_batch = np.transpose(states_batch,axes=[0,2,1])
 
-print(sessions[3])
 print(actions_batch)
+print(sessions[3].shape)
 
-print()
+print(" Interval Graph Representation : ")
+x_interval_graph = " ".join([str(sessions[3][0][ (n_actions * DECISIONS) + i ]) for i in range(N*N)])
+y_interval_graph = " ".join([str(sessions[3][0][ (N*N) + (n_actions * DECISIONS) + i ]) for i in range(N*N)])
+
+print(f"X : {x_interval_graph}")
+print(f"Y : {y_interval_graph}")
 
 rectsGenerated = rectsFromState(sessions[3][0])
 print(rectsGenerated)
@@ -279,6 +303,7 @@ if (rectsGenerated[0]):
 	print("On applying the cutting algorithm we find")
 	print(result)
 
+'''
 super_sessions = select_super_sessions(states_batch, actions_batch, rewards_batch, generations_batch, percentile=super_percentile) #pick the sessions to survive
 print()
 
@@ -290,6 +315,8 @@ super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
 super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
 
 print(super_generations[-1].shape)
+'''
+#####################################
 '''
 
 for i in range(1000000): #1000000 generations should be plenty
@@ -388,4 +415,4 @@ for i in range(1000000): #1000000 generations should be plenty
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
-	
+'''	
