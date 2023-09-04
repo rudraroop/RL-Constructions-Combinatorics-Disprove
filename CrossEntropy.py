@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 7  # Number of rectangles to be generated
+N = 9  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
@@ -40,7 +40,7 @@ FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 
-reward_scaling = 10		# Scale reward to further incentivize killed rectangles
+reward_scaling = 40		# Scale reward to further incentivize killed rectangles
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
 n_actions = 100
@@ -250,7 +250,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 4 # run number used in the filename
+myRand = 5 # run number used in the filename
 
 '''
 sessions = generate_session(model,100,0)	# Play one episode and evaluate it
