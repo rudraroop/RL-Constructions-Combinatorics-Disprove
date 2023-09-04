@@ -2,7 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-def plot_rectangles(rects, score, idx, min, max):
+def plot_rectangles(rects, score, idx, min, max, myrand = -1):
+
+    print(rects)
     
     fig, ax = plt.subplots()
     ax.plot([min,max], [min,max], color='white', linewidth=0)
@@ -13,5 +15,10 @@ def plot_rectangles(rects, score, idx, min, max):
     if (score > -100):
         plt.annotate('Killed ' + str(score) +" Rectangles", (0,0), (0, -20), xycoords='axes fraction', textcoords='offset points', va='top')
     
-    fig.savefig('plots/rects_'+str(idx)+'.png')
+    if (myrand == -1):
+        fig.savefig('plots/rects_'+str(idx)+'.png')
+    
+    else:
+        fig.savefig(f'plots/run_{str(myrand)}/rects_{str(idx)}.png')
+
     plt.close(fig)

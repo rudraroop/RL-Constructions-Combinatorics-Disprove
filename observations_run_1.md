@@ -1,24 +1,26 @@
 # This will be updated after we actually manage to get a successful run
 
-Run 1 - 7 rectangles , action space 100 - the agent seems to pick up on disjoint sets quickly but it takes time to generate sets with at least 1 killed rectangle. We have not progressded from 1 to 2 killed rectangles till now (1000 iterations). There is an apparent need to scale the reward, so that kills are incentivized more heavily. The difference between 0 and -1000 is far greater than 1 and 0 - we will try scaling by 10 
-
-Run 2 - 12 rectangles, action space 200 - this action space still feels too small for a disjoint set to randomly occur in one of the first few runs - could we put an upper bound on rectangle areas? - Perhaps the sum of rectangle areas? - or also pass the area into the state representation as decisions are made?
-
-Run 3 - 12 rectangles, action space 400 - it seems that scaling up the action space doesn't really help the agent get a lucky shot at a disjoint set in the early sessions. If we look at the three generations rects_1, rects_2, rects_3 - all of them look equally cluttered. We will explore another way of rectangle reresentation in a separate feature branch. Instead of generating (x1, x2, y1, y2) we will generate (x1, y1, width, height) - perhaps it will be easier for the agent to generate a disjoint set when it generates rectangles as objects anchored to a single point with two dimensions extending from that point.
-
 **The Current rectangle generation paradigm is as follows** :
 
 We allow the agent to take N*4 decisions where N = number of rectangles we want to generate. For each rectangle, the agent produces 4 co-ordinates in succession - (x1, x2, y1, y2) where (x1, y1) is the bottom-left corner of the rectangle and (x2, y2) is the top-right corner.
 
-The episodes are variable-length. We want to make sure that the agent doesn't take two consecutive decisions where x1 == x2 or y1 == y2 as we have observed this tendency before and this makes the produced rectangle a zero-area rectangle.  Thus we don't count such actions as valid decisions. The game doesn't progress if such an action is taken. In the reward function, we subtract a **delay factor** (proportional to the episode length) from the reward to discourage behaviour where zero-area rectangles are being produced continuously, not allowing the episode to progress.
+For zero-area rectangles generated, we give a high negative reward. For non disjoint rectangle sets this reward is slightly less negative. For disjoint sets, reward is the number of rectangles killed by the optimal cut algorithm scaled by a scaling factor.
 
 **The state representation is as follows** :
 
-The observation space, or state dimensions are (DECISIONS*2). Following from Wagner's code template, the first *DECISIONS* state parameters are the actual decisions taken. i.e. the rectangle co-ordinates generated. While the next *DECISIONS* state parameters are a one-hot-encoding of which decision is currently being made.
+The observation space, or state dimensions are ((n_actions + 1) * DECISIONS). Following from Wagner's code template, the first *n_actions * DECISIONS* state parameters are one-hot representations of the actual decisions taken. i.e. the rectangle co-ordinates generated. While the next *DECISIONS* state parameters are a one-hot-encoding of which decision is currently being made.
 
 **Observations from the run** :
 
+Run 1 - 7 rectangles , action space 100, 1000 episodes per iteration - In the first iteration there is ONE lucky shot. The agent seems to pick up on disjoint sets quickly but it takes time to generate sets with at least 1 killed rectangle. We have not progressded from 1 to 2 killed rectangles till now (~4600 iterations). There is an apparent need to scale the reward, so that kills are incentivized more heavily. The difference between 0 and -1000 is far greater than 1 and 0 - we will try scaling by 10 
 
+Run 2 - 12 rectangles, action space 200, reward scaling 10, 1000 episodes per iteration - this action space still feels too small for a disjoint set to randomly occur in one of the first few runs - could we put an upper bound on rectangle areas? - Perhaps the sum of rectangle areas? - or also pass the area into the state representation as decisions are made?
+
+Run 3 - 12 rectangles, action space 400, reward scaling 10, 2000 episodes per iteration, percentile 60, super_percentile 90 - it seems that scaling up the action space doesn't really help the agent get a lucky shot at a disjoint set in the early sessions. If we look at the three generations rects_1, rects_2, rects_3 - all of them look equally cluttered. A **possible approach** of rectangle reresentation could be - Instead of generating (x1, x2, y1, y2) we will generate (x1, y1, width, height) - perhaps it will be easier for the agent to generate a disjoint set when it generates rectangles as objects anchored to a single point with two dimensions extending from that point.
+
+Run 4 -  7 rectangles , action space 100, reward scaling 10, percentile 70, super_percentile 90, 2000 episodes per iteration - In the first iteration there is ONE lucky shot at a disjoint set. 
+
+**Another approach** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
 Hyperparameters used in this run
 

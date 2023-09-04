@@ -23,12 +23,12 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 12  # Number of rectangles to be generated
+N = 7  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 2000 # number of new sessions per iteration - batch size
-percentile = 60 # top 100-X percentile we are learning from
+percentile = 70 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 
 # The original work revolves around generating a binary or n-ary sentence encoding
@@ -40,8 +40,10 @@ FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 
+reward_scaling = 10		# Scale reward to further incentivize killed rectangles
+
 # At each step, the agent must pick an action which is an integer between 0 and 200
-n_actions = 500
+n_actions = 100
 region_bound = n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
 
 # Note for later:
@@ -104,7 +106,6 @@ def calc_score(state):
 	if (not rectsFromStateResult[0]):
 		return -20000
 
-	reward_scaling = 10		# Scale reward to further incentivize killed rectangles
 	rectangles = rectsFromStateResult[1]
 	
 	# Apply optimal cuts algorithm
@@ -209,7 +210,7 @@ def select_elites(states_batch, actions_batch, rewards_batch, percentile=50):
 	elite_actions = np.array(elite_actions, dtype = int)	
 	return elite_states, elite_actions
 	
-def select_super_sessions(states_batch, actions_batch, rewards_batch, percentile=90):
+def select_super_sessions(states_batch, actions_batch, rewards_batch, generations_batch, percentile=90):
 	"""
 	Select all the sessions that will survive to the next generation
 	Similar to select_elites function
@@ -222,34 +223,43 @@ def select_super_sessions(states_batch, actions_batch, rewards_batch, percentile
 	super_states = []
 	super_actions = []
 	super_rewards = []
+	super_generations = []
+
 	for i in range(len(states_batch)):
 		if rewards_batch[i] >= reward_threshold-0.0000001:
 			if (counter > 0) or (rewards_batch[i] >= reward_threshold+0.0000001):
 				super_states.append(states_batch[i])
 				super_actions.append(actions_batch[i])
 				super_rewards.append(rewards_batch[i])
+				super_generations.append(generations_batch[i])
 				counter -= 1
+
 	super_states = np.array(super_states, dtype = int)
 	super_actions = np.array(super_actions, dtype = int)
 	super_rewards = np.array(super_rewards)
-	return super_states, super_actions, super_rewards
+	super_generations = np.array(super_generations)
+
+	return super_states, super_actions, super_rewards, super_generations
 	
 
 super_states =  np.empty((0,len_game,observation_space), dtype = int)
+super_generations = np.array([], dtype=int)
 super_actions = np.array([], dtype = int)
 super_rewards = np.array([])
 sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-sessions = generate_session(model,1,0)	# Play one episode and evaluate it
+myRand = 4 # run number used in the filename
+
+'''
+sessions = generate_session(model,100,0)	# Play one episode and evaluate it
 
 states_batch = np.array(sessions[0], dtype = int)
 actions_batch = np.array(sessions[1], dtype = int)
 rewards_batch = np.array(sessions[2])
+generations_batch = np.array(sessions[3])
 states_batch = np.transpose(states_batch,axes=[0,2,1])
-
-myRand = 3 # run number used in the filename
 
 print(sessions[3])
 print(actions_batch)
@@ -269,6 +279,19 @@ if (rectsGenerated[0]):
 	print("On applying the cutting algorithm we find")
 	print(result)
 
+super_sessions = select_super_sessions(states_batch, actions_batch, rewards_batch, generations_batch, percentile=super_percentile) #pick the sessions to survive
+print()
+
+print("Super generations array before is :")
+print(super_sessions[3])
+
+super_sessions = [(super_sessions[0][i], super_sessions[1][i], super_sessions[2][i], super_sessions[3][i]) for i in range(len(super_sessions[2]))]
+super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
+super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
+
+print(super_generations[-1].shape)
+'''
+
 for i in range(1000000): #1000000 generations should be plenty
 	#generate new sessions
 	#performance can be improved with joblib
@@ -280,13 +303,24 @@ for i in range(1000000): #1000000 generations should be plenty
 	states_batch = np.array(sessions[0], dtype = int)
 	actions_batch = np.array(sessions[1], dtype = int)
 	rewards_batch = np.array(sessions[2])
+	generations_batch = np.array(sessions[3])
 	states_batch = np.transpose(states_batch,axes=[0,2,1])
 	
 	states_batch = np.append(states_batch,super_states,axis=0)
 
+	#print(f"Iteration: {i}")
+	#print(f"States batch shape = {states_batch.shape}")
+
 	if i>0:
 		actions_batch = np.append(actions_batch,np.array(super_actions),axis=0)	
 	rewards_batch = np.append(rewards_batch,super_rewards)
+	
+	#print(f"Super generations shape {super_generations.shape}")
+	#print(f"Generations batch shape = {generations_batch.shape}")
+
+	if (i > 0):
+		generations_batch = np.append(generations_batch, super_generations, axis=0)
+		#print(f"Generations batch shape after append = {generations_batch.shape}")
 		
 	randomcomp_time = time.time()-tic 
 	tic = time.time()
@@ -296,11 +330,11 @@ for i in range(1000000): #1000000 generations should be plenty
 	select1_time = time.time()-tic
 
 	tic = time.time()
-	super_sessions = select_super_sessions(states_batch, actions_batch, rewards_batch, percentile=super_percentile) #pick the sessions to survive
+	super_sessions = select_super_sessions(states_batch, actions_batch, rewards_batch, generations_batch, percentile=super_percentile) #pick the sessions to survive
 	select2_time = time.time()-tic
 	
 	tic = time.time()
-	super_sessions = [(super_sessions[0][i], super_sessions[1][i], super_sessions[2][i]) for i in range(len(super_sessions[2]))]
+	super_sessions = [(super_sessions[0][i], super_sessions[1][i], super_sessions[2][i], super_sessions[3][i]) for i in range(len(super_sessions[2]))]
 	super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
 	select3_time = time.time()-tic
 
@@ -317,6 +351,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	super_states = [super_sessions[i][0] for i in range(len(super_sessions))]
 	super_actions = [super_sessions[i][1] for i in range(len(super_sessions))]
 	super_rewards = [super_sessions[i][2] for i in range(len(super_sessions))]
+	super_generations = np.array([super_sessions[i][3] for i in range(len(super_sessions))])
 	
 	rewards_batch.sort()
 	mean_all_reward = np.mean(rewards_batch[-100:])	
@@ -350,8 +385,7 @@ for i in range(1000000): #1000000 generations should be plenty
 			f.write(str(super_actions[0]))
 			f.write("\n")
 			
-'''if (i%50 == 0):	# Make a plot of best generation every 50th iteration
-		max_idx = np.argmax(rewards_batch)
-		rectangles = rectsFromState(states_batch[max_idx])
-		plot_rectangles(rectangles, rewards_batch[max_idx], i)'''
-
+	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+		rectangles = rectsFromState(super_generations[0])
+		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
+	
