@@ -23,11 +23,11 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 7  # Number of rectangles to be generated
+N = 12  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions = 1000 # number of new sessions per iteration - batch size
+n_sessions = 2000 # number of new sessions per iteration - batch size
 percentile = 60 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 
@@ -41,7 +41,7 @@ SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
-n_actions = 100
+n_actions = 500
 region_bound = n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
 
 # Note for later:
@@ -104,6 +104,7 @@ def calc_score(state):
 	if (not rectsFromStateResult[0]):
 		return -20000
 
+	reward_scaling = 10		# Scale reward to further incentivize killed rectangles
 	rectangles = rectsFromStateResult[1]
 	
 	# Apply optimal cuts algorithm
@@ -114,7 +115,7 @@ def calc_score(state):
 		return -1000
 
 	# For disjoint sets, reward is proportional to number of killed rectangles
-	return optimalCutsResult[2]
+	return optimalCutsResult[2] * reward_scaling
 
 
 def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
@@ -248,6 +249,8 @@ actions_batch = np.array(sessions[1], dtype = int)
 rewards_batch = np.array(sessions[2])
 states_batch = np.transpose(states_batch,axes=[0,2,1])
 
+myRand = 3 # run number used in the filename
+
 print(sessions[3])
 print(actions_batch)
 
@@ -262,11 +265,9 @@ if (rectsGenerated[0]):
 	# Not zero-area
 	result = optimalCuts(rectsGenerated[1], Rectangle( bottomLeft = (0,0), topRight = (region_bound, region_bound)))
 	print(calc_score(sessions[3][0]))
-	plot_rectangles(rectsGenerated[1], result[2], 1, 0, 200)
+	plot_rectangles(rectsGenerated[1], result[2], myRand, 0, region_bound)
 	print("On applying the cutting algorithm we find")
 	print(result)
-
-myRand = 1 # run number used in the filename
 
 for i in range(1000000): #1000000 generations should be plenty
 	#generate new sessions
@@ -304,7 +305,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	select3_time = time.time()-tic
 
 	#one hot encoding for elite actions
-	elite_actions_one_hot = np.zeros((elite_actions.size, 100))
+	elite_actions_one_hot = np.zeros((elite_actions.size, n_actions))
 	elite_actions_one_hot[np.arange(elite_actions.size), elite_actions] = 1
 	
 	tic = time.time()
