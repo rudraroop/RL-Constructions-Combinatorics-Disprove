@@ -44,7 +44,7 @@ reward_scaling = 10		# Scale reward to further incentivize killed rectangles
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
 n_actions = 100
-region_bound = n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
+region_bound = 2*n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
 
 # Note for later:
 # In case this is not exhaustive enough, we can either increase actions or divide this into 100 intervals of 
@@ -87,14 +87,13 @@ def rectsFromState(state):
 			if state[i*(n_actions) + n_actions + k] == 1 : rect[1] = k
 			if state[i*(n_actions) + (2*n_actions) + k] == 1 : rect[2] = k
 			if state[i*(n_actions) + (3*n_actions) + k] == 1 : rect[3] = k
-		
-		#the rectangle must not be a zero area rectangle
-		if (rect[0] == rect[1] or rect[2] == rect[3]):
-			return False, rects
-		
-		rects.append(Rectangle( bottomLeft = ( min(rect[0], rect[1]), min(rect[2], rect[3]) ), topRight = ( max(rect[0], rect[1]), max(rect[2], rect[3]) ) ))
-		i += 4
 
+		rect[2] += 1 + rect[0]	# correct action with +1 and add it to bottom left x coordinate
+		rect[3] += 1 + rect[1]
+		
+		rects.append(Rectangle( bottomLeft = ( rect[0], rect[1] ), topRight = ( rect[2], rect[3] ) ))
+		i += 4
+	
 	return True, rects
 
 def calc_score(state):
@@ -250,7 +249,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 4 # run number used in the filename
+myRand = 1 # run number used in the filename
 
 '''
 sessions = generate_session(model,100,0)	# Play one episode and evaluate it
@@ -290,6 +289,7 @@ super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
 super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
 
 print(super_generations[-1].shape)
+
 '''
 
 for i in range(1000000): #1000000 generations should be plenty
@@ -388,4 +388,3 @@ for i in range(1000000): #1000000 generations should be plenty
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
-	
