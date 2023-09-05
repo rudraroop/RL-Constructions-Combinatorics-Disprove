@@ -12,9 +12,11 @@ The observation space, or state dimensions are (n_actions * DECISIONS) + (2 * N 
 
 **Observations from the runs** :
 
-Run 1 - 7
+Run 1 - 7 Rectangles - Gets to one killed rectangle pretty fast. More generations with 1 killed rectangle start popping up soon enough
 
-Run 2 - 9 - not learning anything beyond the first single killed rectangle generation. We need a higher learning rate or more parameters in the NN probably
+Run 2 - 9 Rectangles - not learning anything beyond the first single killed rectangle generation. We need a higher learning rate or more parameters in the NN probably
+
+To be done 
 
 Run 3 - 9, with learning rate 0.0005
 
