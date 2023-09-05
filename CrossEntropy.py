@@ -272,7 +272,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 2 # run number used in the filename
+myRand = 3 # run number used in the filename
 
 '''
 sessions = generate_session(model,1,0)	# Play one episode and evaluate it
@@ -325,15 +325,26 @@ for i in range(1000000): #1000000 generations should be plenty
 	#performance can be improved with joblib
 	tic = time.time()
 	sessions = generate_session(model,n_sessions,0) #change 0 to 1 to print out how much time each step in generate_session takes 
+	
+	rewards_batch = np.array(sessions[2])
+	repeat_gens = 1
+	
+	# make sure there is at least one disjoint set at the start
+	while (i == 0 and max(rewards_batch) < 0):
+		repeat_gens += 1
+		sessions = generate_session(model,n_sessions,0)
+		rewards_batch = np.array(sessions[2])
+
 	sessgen_time = time.time()-tic
 	tic = time.time()
 	
+	if (i == 0):
+		print(f"First iteration required {sessgen_time} and {repeat_gens} session generations")
+
 	states_batch = np.array(sessions[0], dtype = int)
 	actions_batch = np.array(sessions[1], dtype = int)
-	rewards_batch = np.array(sessions[2])
 	generations_batch = np.array(sessions[3])
 	states_batch = np.transpose(states_batch,axes=[0,2,1])
-	
 	states_batch = np.append(states_batch,super_states,axis=0)
 
 	#print(f"Iteration: {i}")

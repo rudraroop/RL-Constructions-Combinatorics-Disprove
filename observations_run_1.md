@@ -16,13 +16,14 @@ Run 1 - 7 Rectangles - Gets to one killed rectangle pretty fast. More generation
 
 Run 2 - 9 Rectangles - not learning anything beyond the first single killed rectangle generation. We need a higher learning rate or more parameters in the NN probably
 
-To be done 
-
 Run 3 - 9, with learning rate 0.0005
+
+To be done 
 
 Run 4 - 9 with learning rate 0.0001 and one extra layer in neural network
 
-**Another approach - this will probably be necessary** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
+**Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
+
 
 *Hyperparameters used in run 1*
 
