@@ -1,4 +1,4 @@
-# This will be updated after we actually manage to get a successful run
+# Run Observations 
 
 **The Current rectangle generation paradigm is as follows** :
 
