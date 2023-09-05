@@ -22,11 +22,11 @@ Run 4 -  7 rectangles , action space 100, reward scaling 10, percentile 70, supe
 
 We have produced an image of the best rectangle generation for every 50th session. These are stored in plots/run_4
 
-Run 5 - 9 rectangles, reward scaling 40
+Run 5 - 9 rectangles, reward scaling 40 - extremely slow. Similar to the case in interval graph representation branch. We need to either increase the learning rate or increase the number of layers in the neural network to see what exactly the issue is
 
 **Another approach** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
-Hyperparameters used in this run
+Hyperparameters used in the first run
 
 | Variable Name | Value | Significance |
 |--|--|--|
