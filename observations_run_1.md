@@ -12,19 +12,22 @@ The observation space, or state dimensions are (n_actions * DECISIONS) + (2 * N 
 
 **Observations from the runs** :
 
-No runs yet. This will be updated
+Run 1 - 7
+Run 2 - 9 - not learning anything beyond the first single killed rectangle generation. We need a higher learning rate or more parameters in the NN probably
+Run 3 - 9, with learning rate 0.0005
+Run 4 - 9 with learning rate 0.0001 and one extra layer in neural network
 
-**Another approach** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
+**Another approach - this will probably be necessary** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
-Hyperparameters used in this run
+Hyperparameters used in run 1
 
 | Variable Name | Value | Significance |
 |--|--|--|
-| N | 14 | # Rectangles to generate |
+| N | 7 | # Rectangles to generate |
 | DECISIONS | N*4 | # 4 coordinates to be decided for each rectangle in generation |
  observation_space |  2*DECISIONS | # 4 coordinates to be decided for each rectangle in generation |
 | LEARNING_RATE | 0.0001 | Learning Rate |
-| n_sessions | 400 | Batch Size / # Episodes or Generations per Sessions |
+| n_sessions | 2000 | Batch Size / # Episodes or Generations per Sessions |
 | Percentile | 70 | Top 100-X percent we are learning from after each session |
 | super_percentile | 90 | Top 100-X percent of episodes that survive to the next iteration |
 | FIRST_LAYER_NEURONS | 256 | - |
@@ -32,4 +35,5 @@ Hyperparameters used in this run
 | THIRD_LAYER_NEURONS  | 128 | - |
 | n_actions | 100 | The action space consists of all integers in [0,100). These will be the rectangle coordinates |
 | disjoint_penalty | -2000 | Penalty for not generating a disjoint set of rectangles |  
+| reward_scaling | 40 | Scaling factor. We multiply no of rectangles killed by the optimal cut sequence |
 | long_episode_penalty | -10000 | Penalty for letting an episode run beyond DECISIONS*100 steps |

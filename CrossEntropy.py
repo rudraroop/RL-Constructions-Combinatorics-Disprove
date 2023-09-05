@@ -23,10 +23,10 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 4  # Number of rectangles to be generated
+N = 9  # Number of rectangles to be generated
 DECISIONS = N*4  # For each rectangle, we generate 4 numbers within the bounded square region - the coordinates of the bottom-left and top-right corners  
 
-LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
+LEARNING_RATE = 0.0005 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 2000 # number of new sessions per iteration - batch size
 percentile = 70 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
@@ -39,6 +39,7 @@ super_percentile = 90 # top 100-X percentile that survives to next iteration
 FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
+FOURTH_LAYER_NEURONS = 128
 
 reward_scaling = 40		# Scale reward to further incentivize killed rectangles
 
@@ -65,6 +66,7 @@ model = Sequential()
 model.add(Dense(FIRST_LAYER_NEURONS,  activation="relu"))
 model.add(Dense(SECOND_LAYER_NEURONS, activation="relu"))
 model.add(Dense(THIRD_LAYER_NEURONS, activation="relu"))
+#model.add(Dense(FOURTH_LAYER_NEURONS, activation="relu"))
 model.add(Dense(n_actions, activation="softmax"))  # Alternatively, we can add softmax to this later just to maintain numerical stability during training
 model.build((None, observation_space))
 model.compile(loss='categorical_crossentropy', optimizer=SGD(learning_rate = LEARNING_RATE)) #Adam optimizer also works well, with lower learning rate
@@ -270,8 +272,9 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 1 # run number used in the filename
+myRand = 2 # run number used in the filename
 
+'''
 sessions = generate_session(model,1,0)	# Play one episode and evaluate it
 
 states_batch = np.array(sessions[0], dtype = int)
@@ -303,7 +306,6 @@ if (rectsGenerated[0]):
 	print("On applying the cutting algorithm we find")
 	print(result)
 
-'''
 super_sessions = select_super_sessions(states_batch, actions_batch, rewards_batch, generations_batch, percentile=super_percentile) #pick the sessions to survive
 print()
 
@@ -317,7 +319,6 @@ super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
 print(super_generations[-1].shape)
 '''
 #####################################
-'''
 
 for i in range(1000000): #1000000 generations should be plenty
 	#generate new sessions
@@ -415,4 +416,3 @@ for i in range(1000000): #1000000 generations should be plenty
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
-'''	
