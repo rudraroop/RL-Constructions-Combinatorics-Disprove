@@ -16,8 +16,9 @@ The observation space, or state dimensions are ((n_actions + 1) * DECISIONS). Fo
 
 **Observations from the run** :
 
-run1 = 7 rectangles, scale 10
-run2 = 9 rectangles, scale 40
+run1 = 7 rectangles, reward_scale 10
+
+run 2 = 9 rectangles, reward_scale 40 - We know there is at least one generation of 9 rectangles that has 2 killed rectangles with the optimal cut sequence, so we can observe if this gets picked up on
 
 **Another approach** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
