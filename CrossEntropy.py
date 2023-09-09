@@ -317,7 +317,7 @@ super_sessions.sort(key=lambda super_sessions: super_sessions[2],reverse=True)
 super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
 
 print(super_generations[-1].shape)
-'''
+
 #####################################
 
 for i in range(1000000): #1000000 generations should be plenty
@@ -427,3 +427,4 @@ for i in range(1000000): #1000000 generations should be plenty
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
+'''
