@@ -39,13 +39,13 @@ super_percentile = 90 # top 100-X percentile that survives to next iteration
 FIRST_LAYER_NEURONS = 256
 SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
-FOURTH_LAYER_NEURONS = 128
+#FOURTH_LAYER_NEURONS = 128
 
 reward_scaling = 40		# Scale reward to further incentivize killed rectangles
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
-n_actions = 100
-region_bound = n_actions  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
+n_actions = 101		# integer values -50 to 50
+region_bound = 200  # we will generate rectangles within a region enclosed by x = 0, x = 200, y = 0, y = 200
 
 # Note for later:
 # In case this is not exhaustive enough, we can either increase actions or divide this into 100 intervals of 
@@ -53,7 +53,7 @@ region_bound = n_actions  # we will generate rectangles within a region enclosed
 # # (P, M, V) - where P is the probability of picking a particular interval
 # Within each interval, the number picked will be sampled from a Gaussian Distribution with mean = M and variance = V
 
-observation_space = (n_actions * DECISIONS) + ( 2 * N * N ) + DECISIONS  # The state representation will have N*4 decisions, 2 N*N interval graph 
+observation_space = ( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + ( N * 5 )  # The state representation will have N*4 decisions, 2 N*N interval graph 
 # representation and a one hot encoding of the current decision
 
 len_game = DECISIONS 
@@ -76,25 +76,26 @@ print(model.summary())
 # Changes for N actions instead of 2 need to be incorporated 
 
 def rectsFromState(state):
+	# returns zero-area rectangle boolean, Rectangles
 	rects = []
 	i = 0
-	
+
 	while (i < DECISIONS):
 
 		rect = [-1, -1, -1, -1]
 
-		for k in range(n_actions):
-			#look for x1
-			if state[i*(n_actions) + k] == 1 : rect[0] = k
-			if state[i*(n_actions) + n_actions + k] == 1 : rect[1] = k
-			if state[i*(n_actions) + (2*n_actions) + k] == 1 : rect[2] = k
-			if state[i*(n_actions) + (3*n_actions) + k] == 1 : rect[3] = k
+		for k in range(region_bound):
+			#look for x1, x2, y1, y2
+			if state[i*(region_bound) + k] == 1 : rect[0] = k
+			if state[i*(region_bound) + region_bound + k] == 1 : rect[1] = k
+			if state[i*(region_bound) + (2*region_bound) + k] == 1 : rect[2] = k
+			if state[i*(region_bound) + (3*region_bound) + k] == 1 : rect[3] = k
 		
 		#the rectangle must not be a zero area rectangle
 		if (rect[0] == rect[1] or rect[2] == rect[3]):
 			return False, rects
 		
-		rects.append(Rectangle( bottomLeft = ( min(rect[0], rect[1]), min(rect[2], rect[3]) ), topRight = ( max(rect[0], rect[1]), max(rect[2], rect[3]) ) ))
+		rects.append(Rectangle( bottomLeft = ( rect[0], rect[1] ), topRight = ( rect[2], rect[3] ) ))
 		i += 4
 
 	return True, rects
@@ -127,34 +128,288 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 		
 		# generate integer action from [0, n_actions) based on probability scores
 		action = np.random.choice(a = n_actions, p = prob[i])
-		
-		actions[i][step-1] = action
 		state_next[i] = states[i,:,step-1]	# get current state representation
+
+		'''
+		actions[i][step-1] = action
 		state_next[i][ (n_actions*(step-1)) + action ] = 1	# supply state with current action taken
 		state_next[i][ (n_actions*DECISIONS) + (2*N*N) + step-1 ] = 0 # current action already taken
+		'''
 
-		if (step%4 == 2):
-			# fill in x interval graph
-			action_index = 0
-			curInterval = ( min(actions[i][step-2], actions[i][step-1]), max(actions[i][step-2], actions[i][step-1]) )
-			while (action_index < step):
-				if (intervalsIntersect( ( min(actions[i][action_index], actions[i][action_index + 1]), max(actions[i][action_index], actions[i][action_index + 1]) ) , curInterval)):
-					state_next[i][ (n_actions * DECISIONS) + ( action_index // 4 ) + ( N * ( (step-1) // 4 ) ) ] = 1
-					state_next[i][ (n_actions * DECISIONS) + ( N * ( action_index // 4 ) ) + ( (step-1) // 4 ) ] = 1
-				action_index += 4
-		
-		if (step%4 == 0):
-			# fill in y interval graph
-			action_index = 2
-			curInterval = ( min(actions[i][step-2], actions[i][step-1]), max(actions[i][step-2], actions[i][step-1]) )
-			while (action_index < step):
-				if (intervalsIntersect( ( min(actions[i][action_index], actions[i][action_index + 1]), max(actions[i][action_index], actions[i][action_index + 1]) ) , curInterval)):
-					state_next[i][ (n_actions * DECISIONS) + (N * N) + ( N * ( action_index // 4 ) ) + ( (step-1) // 4 ) ] = 1
-					state_next[i][ (n_actions * DECISIONS) + (N * N) + ( action_index // 4 ) + ( N * ( (step-1) // 4 ) ) ] = 1
-				action_index += 4
+		if (step % 5 == 0):		# choose the rectangle
+			
+			choice = action % N
+			
+			# choose the closest unworked rectangle
+			diff = 100000
+			for rect in range(N):
+				if (state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + rect] == 0 and abs(rect - choice) < abs(diff)):
+					diff = rect - choice
 
-		if (step < DECISIONS):	# doesn't make sense to make the next action position 1 if already terminal
-			state_next[i][ (n_actions*DECISIONS) + (2*N*N) + step] = 1			
+			choice += diff	# readjust to closest available rectangle
+			
+			actions[i][step-1] = choice		# record chosen action
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + choice] = 1	# Mark current rectangle as taken
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + choice] = 1	# Mark current rectangle as the one in use
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
+	
+		elif (step % 5 == 1):	# move bottom right corner x coordinate
+
+			#determine which rectangle agent is working on
+			rect_choice = 0
+
+			while (rect_choice < N):
+				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
+					break
+				rect_choice += 1
+
+			rectangles = rectsFromState(state_next[i])
+			normalized_action = action - (n_actions//2)
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[0]
+			normalized_action_lower_bound = 0 - rectangles[rect_choice].bottomLeft[0]
+
+			# check for
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# don't compare with self
+					continue
+
+				# check if the y intervals intersect - directly available in state representation
+				if (state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] == 1):
+					
+					if (rectangles[rect_choice].topRight[0] <= rectangles[rect].bottomLeft[0]):  # possible collision for positive normalized actions  
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[0] - rectangles[rect_choice].topRight[0] )
+
+					if (rectangles[rect_choice].bottomLeft[0] >= rectangles[rect].topRight[0]):	# possible collision for negative normalized actions
+						normalized_action_lower_bound = max( normalized_action_lower_bound,  rectangles[rect].topRight[0] - rectangles[rect_choice].bottomLeft[0] )
+
+
+			normalized_action = max(normalized_action_lower_bound, normalized_action)
+			normalized_action = min(normalized_action_upper_bound, normalized_action)
+			true_action = normalized_action + (n_actions//2)
+			x1 = rectangles[rect_choice].bottomLeft[0] + normalized_action
+			x2 = rectangles[rect_choice].topRight[0] + normalized_action
+
+			# fill in the x interval graph as it may be changed now
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# will always intersect with itself, no change required here
+					continue
+
+				if (intervalsIntersect((x1, x2), (rectangles[rect].bottomLeft[0], rectangles[rect].topRight[0]))):
+					state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] = 1
+					state_next[i][(region_bound * N *4) + (rect*N) + rect_choice] = 1
+
+				else:
+					state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] = 0
+					state_next[i][(region_bound * N *4) + (rect*N) + rect_choice] = 0
+
+			# Update state representation
+			for k in range(region_bound):
+				# look for x1, x2
+				if (k == x1):
+					state_next[i][rect_choice*(region_bound) + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + k] = 0
+				
+				if (k == x2):
+					state_next[i][rect_choice*(region_bound) + region_bound + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + region_bound + k] = 0
+
+			# update arrays
+			actions[i][step-1] = true_action		# record chosen action
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
+
+		elif (step % 5 == 2):	# move bottom right corner y coordinate
+
+			#determine which rectangle agent is working on
+			rect_choice = 0
+
+			while (rect_choice < N):
+				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
+					break
+				rect_choice += 1
+
+			rectangles = rectsFromState(state_next[i])
+			normalized_action = action - (n_actions//2)
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[1]
+			normalized_action_lower_bound = 0 - rectangles[rect_choice].bottomLeft[1]
+
+			# check for
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# don't compare with self
+					continue
+
+				# check if the x intervals intersect - directly available in state representation
+				if (state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] == 1):
+					
+					if (rectangles[rect_choice].topRight[1] <= rectangles[rect].bottomLeft[1]):  # possible collision for positive normalized actions  
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[1] - rectangles[rect_choice].topRight[1] )
+
+					if (rectangles[rect_choice].bottomLeft[1] >= rectangles[rect].topRight[1]):	# possible collision for negative normalized actions
+						normalized_action_lower_bound = max( normalized_action_lower_bound,  rectangles[rect].topRight[1] - rectangles[rect_choice].bottomLeft[1] )
+
+
+			normalized_action = max(normalized_action_lower_bound, normalized_action)
+			normalized_action = min(normalized_action_upper_bound, normalized_action)
+			true_action = normalized_action + (n_actions//2)
+			y1 = rectangles[rect_choice].bottomLeft[1] + normalized_action
+			y2 = rectangles[rect_choice].topRight[1] + normalized_action
+
+			# fill in the x interval graph as it may be changed now
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# will always intersect with itself, no change required here
+					continue
+
+				if (intervalsIntersect((y1, y2), (rectangles[rect].bottomLeft[1], rectangles[rect].topRight[1]))):
+					state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] = 1
+					state_next[i][(region_bound * N *4) + (N*N) + (rect*N) + rect_choice] = 1
+
+				else:
+					state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] = 0
+					state_next[i][(region_bound * N *4) + (N*N) + (rect*N) + rect_choice] = 0
+
+			# Update state representation
+			for k in range(region_bound):
+				# look for y1, y2
+				if (k == y1):
+					state_next[i][rect_choice*(region_bound) + (2*region_bound) + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + (2*region_bound) + k] = 0
+				
+				if (k == y2):
+					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 0
+
+			# update arrays
+			actions[i][step-1] = true_action		# record chosen action
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
+
+		elif (step % 5 == 3):	# x scaling (width scaling)
+
+			#determine which rectangle agent is working on
+			rect_choice = 0
+
+			while (rect_choice < N):
+				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
+					break
+				rect_choice += 1
+
+			rectangles = rectsFromState(state_next[i])
+			normalized_action = action - (n_actions//2)
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[0]
+			normalized_action_lower_bound = 1 - rectangles[rect_choice].bottomLeft[0]
+
+			# check for
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# don't compare with self
+					continue
+
+				# check if the y intervals intersect - directly available in state representation
+				if (state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] == 1):
+					
+					if (rectangles[rect_choice].topRight[0] <= rectangles[rect].bottomLeft[0]):  # possible collision for positive normalized actions  
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[0] - rectangles[rect_choice].topRight[0] )
+
+			normalized_action = max(normalized_action_lower_bound, normalized_action)
+			normalized_action = min(normalized_action_upper_bound, normalized_action)
+			true_action = normalized_action + (n_actions//2)
+			x1 = rectangles[rect_choice].bottomLeft[0]	# anchored to bottom left, this co-ordinate will not change
+			x2 = rectangles[rect_choice].topRight[0] + normalized_action
+
+			# fill in the x interval graph as it may be changed now (this is true even if width decreases)
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# will always intersect with itself, no change required here
+					continue
+
+				if (intervalsIntersect((x1, x2), (rectangles[rect].bottomLeft[0], rectangles[rect].topRight[0]))):
+					state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] = 1
+					state_next[i][(region_bound * N *4) + (rect*N) + rect_choice] = 1
+
+				else:
+					state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] = 0
+					state_next[i][(region_bound * N *4) + (rect*N) + rect_choice] = 0
+
+			# Update state representation
+			for k in range(region_bound):
+				# no need to change x1 as it is anchored already
+				if (k == x2):
+					state_next[i][rect_choice*(region_bound) + region_bound + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + region_bound + k] = 0
+
+			# update arrays
+			actions[i][step-1] = true_action		# record chosen action
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
+
+
+		else: # step % 5 == 4 ---> y scaling (height scaling)
+
+			#determine which rectangle agent is working on
+			rect_choice = 0
+
+			while (rect_choice < N):
+				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
+					break
+				rect_choice += 1
+
+			rectangles = rectsFromState(state_next[i])
+			normalized_action = action - (n_actions//2)
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[1]
+			normalized_action_lower_bound = 1 - rectangles[rect_choice].bottomLeft[1]
+
+			# check for
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# don't compare with self
+					continue
+
+				# check if the x intervals intersect - directly available in state representation
+				if (state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] == 1):
+					
+					if (rectangles[rect_choice].topRight[1] <= rectangles[rect].bottomLeft[1]):  # possible collision for positive normalized actions  
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[1] - rectangles[rect_choice].topRight[1] )
+
+			normalized_action = max(normalized_action_lower_bound, normalized_action)
+			normalized_action = min(normalized_action_upper_bound, normalized_action)
+			true_action = normalized_action + (n_actions//2)
+			y1 = rectangles[rect_choice].bottomLeft[1]	# no changes, this is anchored
+			y2 = rectangles[rect_choice].topRight[1] + normalized_action
+
+			# fill in the y interval graph as it may be changed now - once again, this applies even if height is decreased
+			for rect in range(N):
+				
+				if (rect == rect_choice):	# will always intersect with itself, no change required here
+					continue
+
+				if (intervalsIntersect((y1, y2), (rectangles[rect].bottomLeft[1], rectangles[rect].topRight[1]))):
+					state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] = 1
+					state_next[i][(region_bound * N *4) + (N*N) + (rect*N) + rect_choice] = 1
+
+				else:
+					state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] = 0
+					state_next[i][(region_bound * N *4) + (N*N) + (rect*N) + rect_choice] = 0
+
+			# Update state representation
+			for k in range(region_bound):
+				# no need to change y1, this is anchored
+				if (k == y2):
+					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 1
+				else:
+					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 0
+
+			# update arrays
+			actions[i][step-1] = true_action		# record chosen action
+			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
+
+		if (step < DECISIONS):	# doesn't make sense to make the next decision position 1 if already terminal	
+			state_next[i][ ( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step ] = 1		
 		
 		#calculate final score
 		terminal = step == DECISIONS
@@ -172,9 +427,9 @@ def generate_session(agent, n_sessions, verbose = 1):
 	"""
 	Play n_session games using agent neural network.
 	Terminate when games finish 
-	
-	Code inspired by https://github.com/yandexdataschool/Practical_RL/blob/master/week01_intro/deep_crossentropy_method.ipynb
 	"""
+	# states - the initial state still needs to be given
+
 	states =  np.zeros([n_sessions, observation_space, len_game], dtype=int) # all states encountered in all sessions
 	actions = np.zeros([n_sessions, len_game], dtype = int)	 # all actions taken in all sessions
 	state_next = np.zeros([n_sessions,observation_space], dtype = int) # current state of each session
