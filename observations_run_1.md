@@ -12,6 +12,10 @@ What is a normalized action value? Say we have set n_actions = 101, then action 
 
 With this approach, we don't let the agent produce anything other than disjoint rectangle sets. Thus, our reward only depends on number of rectangles killed.
 
+**Change Required in Generate Session function** :
+
+For the generate_sessions function, we need to give the initial state. For the initial state to be given, we need to formulate a method that evenly spaces N rectangles in the bounded region, and convert this to our own state representation which includes the interval graphs for x and y. Making this method needs to be our next step, after which we can simply call it and populate the first column of the state matrix (take care of how you do this because the format is not inherently clear) 
+
 **The state representation is as follows** :
 
 The observation space, or state dimensions are 
