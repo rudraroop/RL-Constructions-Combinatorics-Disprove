@@ -4,7 +4,7 @@
 
 We allow the agent to take N*5 decisions where N = number of rectangles in the generation. In this approach, there are always N rectangles present in the bounded box, the agent simply manipulates their positions and dimensions. 
 
-The agent takes 5 decisions sequentially, the first decision determines which rectangle it is going to work on. The next two decisions make changes to the (x1,y1) bottom left corner - either by adding or subtracting the normalized action value from this. When an action is picked by the agent, we make sure to readjust the normalized action to the closest action that doesn't cause a collision with the other rectangles or the boundaries of the region. We make the same adjustment to the true action value before saving the action details. The 4th and 5th decisions make changes to the rectangle dimensions. They either add or subtract the normalized action value something from the width and height respectively. Once again the normalized action value and the true action value will both be adjusted to make sure there are no collisions our out-of-bounds.
+The agent takes 5 decisions sequentially, the first decision determines which rectangle it is going to work on. The next two decisions make changes to the position of the rectangle (x1,y1) bottom left corner - either by adding or subtracting the normalized action value from this. When an action is picked by the agent, we make sure to readjust the normalized action to the closest action that doesn't cause a collision with the other rectangles or the boundaries of the region. We make the same adjustment to the true action value before saving the action details. The 4th and 5th decisions make changes to the rectangle dimensions. They either add or subtract the normalized action value something from the width and height respectively. Once again the normalized action value and the true action value will both be adjusted to make sure there are no collisions our out-of-bounds.
 
 Interval graphs will be constructed with each change in rectangle parameters and passed into the state. 
 
@@ -33,7 +33,8 @@ Let's break this down
 
 To be done
 
-Run 1 - 9 Rectangles
+Run 1 - 12 Rectangles, Adding/Subtracting width or height : Too many rectangles with extremely small dimensions 
+Run 2 - 12 Rectangles, Learning rate = 0.0001, Percentile 85, Reassigning width or height
 
 **Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
@@ -45,9 +46,9 @@ Run 1 - 9 Rectangles
 | N | 7 | # Rectangles to generate |
 | DECISIONS | N*4 | # 4 coordinates to be decided for each rectangle in generation |
  observation_space |  2*DECISIONS | # 4 coordinates to be decided for each rectangle in generation |
-| LEARNING_RATE | 0.0001 | Learning Rate |
-| n_sessions | 2000 | Batch Size / # Episodes or Generations per Sessions |
-| Percentile | 70 | Top 100-X percent we are learning from after each session |
+| LEARNING_RATE | 0.0005 | Learning Rate |
+| n_sessions | 1000 | Batch Size / # Episodes or Generations per Sessions |
+| Percentile | 90 | Top 100-X percent we are learning from after each session |
 | super_percentile | 90 | Top 100-X percent of episodes that survive to the next iteration |
 | FIRST_LAYER_NEURONS | 256 | - |
 | SECOND_LAYER_NEURONS | 128 | - |

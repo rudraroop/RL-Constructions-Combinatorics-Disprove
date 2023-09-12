@@ -24,16 +24,16 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 11  # Number of rectangles to be generated
+N = 12  # Number of rectangles to be generated
 
-LEARNING_RATE = 0.0005 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
-n_sessions = 2000 # number of new sessions per iteration - batch size
-percentile = 70 # top 100-X percentile we are learning from
+LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
+n_sessions = 1000 # number of new sessions per iteration - batch size
+percentile = 85 # top 100-X percentile we are learning from
 super_percentile = 90 # top 100-X percentile that survives to next iteration
 
 # The original work revolves around generating a binary or n-ary sentence encoding
-# However, here our action space is a continuous, finite interval from which any float number could be picked
-# Therefore, we will try to take a different approach and see if that works
+# Ideally, here our action space is a continuous, finite interval from which any float number could be picked
+# But we will restrain our action space to a discrete integer subset of this interval
 
 # Hidden Layer Neurons
 FIRST_LAYER_NEURONS = 256
@@ -41,7 +41,7 @@ SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 #FOURTH_LAYER_NEURONS = 128
 
-reward_scaling = 40		# Scale reward to further incentivize killed rectangles
+reward_scaling = 40		# Scale up to further incentivize behaviours that kill more rectangles
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
 n_actions = 101		# integer values -50 to 50
@@ -99,7 +99,6 @@ def stateFromRects(rects):
 def initial_state():
 	# we will make a grid of identical rectangles - height 20, width 10, spacing 20
 	height, width, spacing = 20, 10, 25
-	print(sqrt(N))
 	num_rows = math.sqrt(N)//1	# integer floor value
 	max_cols = math.ceil(N/num_rows)	# integer ceil value
 	rects = []
@@ -112,8 +111,6 @@ def initial_state():
 		rects.append(Rectangle(bottomLeft=( spacing*(col+1) + width*col, spacing*(row+1) + height*row ), topRight=( spacing*(col+1) + width*(col+1), spacing*(row+1) + height*(row+1) )))
 		i += 1
 	
-	plot_rectangles(rects, 0, myRand, 0, region_bound)
-
 	return stateFromRects(rects)
 
 def rectsFromState(state):
@@ -168,9 +165,10 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 	for i in range(n_sessions):
 		
 		# generate integer action from [0, n_actions) based on probability scores
+		#print("---------------------------------------")
 		action = np.random.choice(a = n_actions, p = prob[i])
 		state_next[i] = states[i,:,step-1]	# get current state representation
-		print(f"Step = {step-1}")
+		#print(f"Step = {step-1}")
 
 		'''
 		actions[i][step-1] = action
@@ -189,6 +187,7 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 					diff = rect - choice
 
 			choice += diff	# readjust to closest available rectangle
+			#print(f"Rectangle index chosen - {choice}")
 			
 			actions[i][step-1] = choice		# record chosen action
 			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + choice] = 1	# Mark current rectangle as taken
@@ -203,9 +202,20 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			while (rect_choice < N):
 				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
 					break
-				rect_choice += 1
+				else:
+					rect_choice += 1
+			
+			'''print(f"Moving rectangle along x")
 
-			rectangles = rectsFromState(state_next[i])[1]
+			if (rect_choice >= N):
+				print(f"For some reason, chosen rectangle was not located, rect_choice is {N} which is out of bounds")
+			else:
+				print(f"Rectangle chosen is {rect_choice}")'''
+
+			rectangles = rectsFromState(state_next[i])
+			#print("Rectangles received from state : ")
+			#print(rectangles)
+			rectangles = rectangles[1]
 			normalized_action = action - (n_actions//2)
 			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[0]
 			normalized_action_lower_bound = 0 - rectangles[rect_choice].bottomLeft[0]
@@ -231,6 +241,7 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			true_action = normalized_action + (n_actions//2)
 			x1 = rectangles[rect_choice].bottomLeft[0] + normalized_action
 			x2 = rectangles[rect_choice].topRight[0] + normalized_action
+			#print(f"After moving, x1 = {x1}, x2 = {x2}")
 
 			# fill in the x interval graph as it may be changed now
 			for rect in range(N):
@@ -250,14 +261,14 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			for k in range(region_bound):
 				# look for x1, x2
 				if (k == x1):
-					state_next[i][rect_choice*(region_bound) + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + k] = 0
 				
 				if (k == x2):
-					state_next[i][rect_choice*(region_bound) + region_bound + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + region_bound + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + region_bound + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + region_bound + k] = 0
 
 			# update arrays
 			actions[i][step-1] = true_action		# record chosen action
@@ -271,9 +282,20 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			while (rect_choice < N):
 				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
 					break
-				rect_choice += 1
+				else:
+					rect_choice += 1
+			
+			'''print(f"Moving rectangle along y")
 
-			rectangles = rectsFromState(state_next[i])[1]
+			if (rect_choice >= N):
+				print(f"For some reason, chosen rectangle was not located, rect_choice is {N} which is out of bounds")
+			else:
+				print(f"Rectangle chosen is {rect_choice}")'''
+
+			rectangles = rectsFromState(state_next[i])
+			#print("Rectangles received from state : ")
+			#print(rectangles)
+			rectangles = rectangles[1]
 			normalized_action = action - (n_actions//2)
 			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[1]
 			normalized_action_lower_bound = 0 - rectangles[rect_choice].bottomLeft[1]
@@ -299,6 +321,7 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			true_action = normalized_action + (n_actions//2)
 			y1 = rectangles[rect_choice].bottomLeft[1] + normalized_action
 			y2 = rectangles[rect_choice].topRight[1] + normalized_action
+			#print(f"After moving, y1 = {y1}, y2 = {y2}")
 
 			# fill in the x interval graph as it may be changed now
 			for rect in range(N):
@@ -318,14 +341,14 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			for k in range(region_bound):
 				# look for y1, y2
 				if (k == y1):
-					state_next[i][rect_choice*(region_bound) + (2*region_bound) + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + (2*region_bound) + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + (2*region_bound) + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + (2*region_bound) + k] = 0
 				
 				if (k == y2):
-					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + (3*region_bound) + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + (3*region_bound) + k] = 0
 
 			# update arrays
 			actions[i][step-1] = true_action		# record chosen action
@@ -339,12 +362,23 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			while (rect_choice < N):
 				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
 					break
-				rect_choice += 1
+				else:
+					rect_choice += 1
+			
+			'''print(f"Scaling rectangle along x")
 
-			rectangles = rectsFromState(state_next[i])[1]
-			normalized_action = action - (n_actions//2)
-			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[0]
-			normalized_action_lower_bound = 1 - rectangles[rect_choice].bottomLeft[0]
+			if (rect_choice >= N):
+				print(f"For some reason, chosen rectangle was not located, rect_choice is {N} which is out of bounds")
+			else:
+				print(f"Rectangle chosen is {rect_choice}")'''
+
+			rectangles = rectsFromState(state_next[i])
+			#print("Rectangles received from state : ")
+			#print(rectangles)
+			rectangles = rectangles[1]
+			normalized_action = action  # we simply make this the width instead of adding or subtracting as we have seen that approach not working in a previous run 
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].bottomLeft[0]	# can't let it go out of bounds
+			normalized_action_lower_bound = 1 # no zero area rectangles 
 
 			# check for
 			for rect in range(N):
@@ -356,13 +390,15 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 				if (state_next[i][(region_bound * N *4) + (N*N) + (rect_choice*N) + rect] == 1):
 					
 					if (rectangles[rect_choice].topRight[0] <= rectangles[rect].bottomLeft[0]):  # possible collision for positive normalized actions  
-						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[0] - rectangles[rect_choice].topRight[0] )
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[0] - rectangles[rect_choice].bottomLeft[0] )
 
 			normalized_action = max(normalized_action_lower_bound, normalized_action)
 			normalized_action = min(normalized_action_upper_bound, normalized_action)
-			true_action = normalized_action + (n_actions//2)
+			true_action = normalized_action
 			x1 = rectangles[rect_choice].bottomLeft[0]	# anchored to bottom left, this co-ordinate will not change
-			x2 = rectangles[rect_choice].topRight[0] + normalized_action
+			x2 = x1 + normalized_action
+			'''print(f"Scaling action: {action}, after normalization: {normalized_action}")
+			print(f"After scaling, x1 = {x1}, x2 = {x2}")'''
 
 			# fill in the x interval graph as it may be changed now (this is true even if width decreases)
 			for rect in range(N):
@@ -382,14 +418,13 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			for k in range(region_bound):
 				# no need to change x1 as it is anchored already
 				if (k == x2):
-					state_next[i][rect_choice*(region_bound) + region_bound + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + region_bound + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + region_bound + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + region_bound + k] = 0
 
 			# update arrays
 			actions[i][step-1] = true_action		# record chosen action
 			state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + step-1] = 0 	# current decision already taken
-
 
 		else: # step-1 % 5 == 4 ---> y scaling (height scaling)
 
@@ -399,12 +434,23 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			while (rect_choice < N):
 				if ( state_next[i][( region_bound * N * 4 ) + ( 2 * N * N ) + N + rect_choice] == 1 ):
 					break
-				rect_choice += 1
+				else:
+					rect_choice += 1
+			
+			'''print(f"Scaling rectangle along y")
 
-			rectangles = rectsFromState(state_next[i])[1]
-			normalized_action = action - (n_actions//2)
-			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].topRight[1]
-			normalized_action_lower_bound = 1 - rectangles[rect_choice].bottomLeft[1]
+			if (rect_choice >= N):
+				print(f"For some reason, chosen rectangle was not located, rect_choice is {N} which is out of bounds")
+			else:
+				print(f"Rectangle chosen is {rect_choice}")'''
+
+			rectangles = rectsFromState(state_next[i])
+			'''print("Rectangles received from state : ")
+			print(rectangles)'''
+			rectangles = rectangles[1]
+			normalized_action = action
+			normalized_action_upper_bound = region_bound - 1 - rectangles[rect_choice].bottomLeft[1]
+			normalized_action_lower_bound = 1
 
 			# check for
 			for rect in range(N):
@@ -416,13 +462,15 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 				if (state_next[i][(region_bound * N *4) + (rect_choice*N) + rect] == 1):
 					
 					if (rectangles[rect_choice].topRight[1] <= rectangles[rect].bottomLeft[1]):  # possible collision for positive normalized actions  
-						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[1] - rectangles[rect_choice].topRight[1] )
+						normalized_action_upper_bound = min( normalized_action_upper_bound,  rectangles[rect].bottomLeft[1] - rectangles[rect_choice].bottomLeft[1] )
 
 			normalized_action = max(normalized_action_lower_bound, normalized_action)
 			normalized_action = min(normalized_action_upper_bound, normalized_action)
-			true_action = normalized_action + (n_actions//2)
+			true_action = normalized_action
 			y1 = rectangles[rect_choice].bottomLeft[1]	# no changes, this is anchored
-			y2 = rectangles[rect_choice].topRight[1] + normalized_action
+			y2 = y1 + normalized_action
+			'''print(f"Scaling action: {action}, after normalization: {normalized_action}")
+			print(f"After scaling, y1 = {y1}, y2 = {y2}")'''
 
 			# fill in the y interval graph as it may be changed now - once again, this applies even if height is decreased
 			for rect in range(N):
@@ -442,9 +490,9 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 			for k in range(region_bound):
 				# no need to change y1, this is anchored
 				if (k == y2):
-					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 1
+					state_next[i][rect_choice*(region_bound*4) + (3*region_bound) + k] = 1
 				else:
-					state_next[i][rect_choice*(region_bound) + (3*region_bound) + k] = 0
+					state_next[i][rect_choice*(region_bound*4) + (3*region_bound) + k] = 0
 
 			# update arrays
 			actions[i][step-1] = true_action		# record chosen action
@@ -457,7 +505,7 @@ def play_game(n_sessions, actions, state_next, states, prob, step, total_score):
 		#calculate final score
 		terminal = step == (N*5)
 		if terminal:
-			plot_rectangles(rectsFromState(state_next[i])[1], 0, 0, 0, region_bound)
+			#plot_rectangles(rectsFromState(state_next[i])[1], 0, 0, 0, region_bound)
 			total_score[i] = calc_score(state_next[i])
 	
 		# record sessions 
@@ -480,8 +528,15 @@ def generate_session(agent, n_sessions, verbose = 1):
 	prob = np.zeros(n_sessions) # action probabilities for current state of each session
 	
 	# populate states with initial state representation
+	start_state = initial_state()
+
 	for i in range(n_sessions):
-		states[i,:,0] = initial_state()
+		states[i,:,0] = start_state
+
+	'''print("Initial state is : ")
+	print(initial_state())
+	print("States is : ")
+	print(states)'''
 
 	step = 0
 	total_score = np.zeros([n_sessions])
@@ -575,9 +630,10 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 3 # run number used in the filename
+myRand = 2 # run number used in the filename
 
-sessions = generate_session(model,1,0)	# Play one episode and evaluate it
+'''
+sessions = generate_session(model,2,0)	# Play one episode and evaluate it
 
 states_batch = np.array(sessions[0], dtype = int)
 actions_batch = np.array(sessions[1], dtype = int)
@@ -586,6 +642,11 @@ generations_batch = np.array(sessions[3])
 states_batch = np.transpose(states_batch,axes=[0,2,1])
 
 rectsGenerated = rectsFromState(sessions[3][0])
+print("Rectangles generated session 0")
+print(rectsGenerated[1])
+
+rectsGenerated = rectsFromState(sessions[3][1])
+print("Rectangles Generated session 1")
 print(rectsGenerated[1])
 
 print(sessions[3].shape)
@@ -597,7 +658,6 @@ y_interval_graph = " ".join([str(sessions[3][0][ (N*N) + ( region_bound * N * 4 
 print(f"X : {x_interval_graph}")
 print(f"Y : {y_interval_graph}")
 
-'''
 print()
 
 if (rectsGenerated[0]):
@@ -621,6 +681,7 @@ super_generations = [super_sessions[i][3] for i in range(len(super_sessions))]
 print(super_generations[-1].shape)
 
 #####################################
+'''
 
 for i in range(1000000): #1000000 generations should be plenty
 	#generate new sessions
@@ -632,7 +693,7 @@ for i in range(1000000): #1000000 generations should be plenty
 	repeat_gens = 1
 	
 	# make sure there is at least one disjoint set at the start
-	while (i == 0 and max(rewards_batch) < 0):
+	while (i == 0 and max(rewards_batch) <= 0):
 		repeat_gens += 1
 		sessions = generate_session(model,n_sessions,0)
 		rewards_batch = np.array(sessions[2])
@@ -729,4 +790,3 @@ for i in range(1000000): #1000000 generations should be plenty
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
-'''
