@@ -28,8 +28,8 @@ N = 12  # Number of rectangles to be generated
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 1000 # number of new sessions per iteration - batch size
-percentile = 85 # top 100-X percentile we are learning from
-super_percentile = 90 # top 100-X percentile that survives to next iteration
+percentile = 93 # top 100-X percentile we are learning from
+super_percentile = 95 # top 100-X percentile that survives to next iteration
 
 # The original work revolves around generating a binary or n-ary sentence encoding
 # Ideally, here our action space is a continuous, finite interval from which any float number could be picked
@@ -41,7 +41,7 @@ SECOND_LAYER_NEURONS = 128
 THIRD_LAYER_NEURONS = 128
 #FOURTH_LAYER_NEURONS = 128
 
-reward_scaling = 40		# Scale up to further incentivize behaviours that kill more rectangles
+reward_scaling = 100		# Scale up to further incentivize behaviours that kill more rectangles
 
 # At each step, the agent must pick an action which is an integer between 0 and 200
 n_actions = 101		# integer values -50 to 50
@@ -630,7 +630,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 2 # run number used in the filename
+myRand = 3 # run number used in the filename
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it

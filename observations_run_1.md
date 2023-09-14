@@ -31,13 +31,12 @@ Let's break this down
 
 **Observations from the runs** :
 
-To be done
-
-Run 1 - 12 Rectangles, Adding/Subtracting width or height : Too many rectangles with extremely small dimensions 
-Run 2 - 12 Rectangles, Learning rate = 0.0001, Percentile 85, Reassigning width or height - In 9 iterations, the NN has gone from producing most generations with 1 rectangle killed to most with 2 rectangles killed and ONE with 3 rectangles killed
+Run 1 - 12 Rectangles, Adding/Subtracting width or height : Too many rectangles with extremely small dimensions - gets stuck at 1 killed
+Run 2 - 12 Rectangles, Learning rate = 0.0001, Percentile 85, Reassigning width or height - In 9 iterations, the NN has gone from producing most generations with 1 rectangle killed to most with 2 rectangles killed and ONE with 3 rectangles killed. However, there have only been two generations with 3 killed rectangles until the 150th iteration
+Run 3 - 12 Rectangles, Learning rate = 0.0001, Percentile 93, Super percentile 95, Reassigning width or height, reward scaling 100 - 35 iterations for first generation with 3 kills
+Run 3 - 16 Rectangles, Learning rate = 0.0001, Percentile 93, Super percentile 95, Reassigning width or height, reward scaling 100 - 35 iterations for first generation with 3 kills
 
 **Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
-
 
 *Hyperparameters used in run 1*
 
