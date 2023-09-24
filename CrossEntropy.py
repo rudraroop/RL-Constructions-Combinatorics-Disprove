@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 12  # Number of rectangles to be generated
+N = 8  # Number of rectangles to be generated
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 1000 # number of new sessions per iteration - batch size
@@ -630,7 +630,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 3 # run number used in the filename
+myRand = 16 # run number used in the filename
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it
@@ -789,4 +789,7 @@ for i in range(1000000): #1000000 generations should be plenty
 			
 	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
+		with open(f'plots/run_{str(myRand)}/displayed_generations.txt', 'a') as f:
+			f.write(str(rectangles[1]))
+			f.write("\n")
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles

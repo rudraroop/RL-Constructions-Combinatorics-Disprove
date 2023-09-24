@@ -37,9 +37,26 @@ Run 2 - 12 Rectangles, Learning rate = 0.0001, Percentile 85, Reassigning width 
 
 Run 3 - 12 Rectangles, Learning rate = 0.0001, Percentile 93, Super percentile 95, Reassigning width or height, reward scaling 100 - 35 iterations for first generation with 3 kills
 
-Run 3 - 16 Rectangles, Learning rate = 0.0001, Percentile 93, Super percentile 95, Reassigning width or height, reward scaling 100 - 0 iterations for first generation with 3 kills. By the 30th iteration, almost all the elite rewards have 3 rectangles killed. We did not move past this due to a power cut
+Run 4 - 16 Rectangles, Learning rate = 0.0001, Percentile 93, Super percentile 95, Reassigning width or height, reward scaling 100 - 0 iterations for first generation with 3 kills. By the 30th iteration, almost all the elite rewards have 3 rectangles killed. We did not move past this due to a power cut
 
-Run 4 - Simply a re-run of Run 3
+Run 5 - Simply a re-run of Run 4
+
+Run 6 - 10 Rectangles, same parameters as run 4
+Run 7 - 11 Rectangles, same parameters as run 4
+
+Run 8 - 12 Rectangles, same
+Run 9 - 13 Rectangles, same
+
+Run 10 - 14 Rectangles, same
+Run 11 - 15 Rectangles, same
+
+# running
+Run 12 - 17 Rectangles, same
+Run 13 - 18 Rectangles, same
+
+# to do
+Run 14 - 19 Rectangles, same
+Run 15 - 20 Rectangles, same
 
 **Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
