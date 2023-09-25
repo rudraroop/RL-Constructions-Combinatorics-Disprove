@@ -42,7 +42,7 @@ def plot_rectangles_with_cuts(rects, min, max, idx):
         ax.add_patch(patches.Rectangle(rect.bottomLeft, rect.topRight[0] - rect.bottomLeft[0], rect.topRight[1] - rect.bottomLeft[1], edgecolor = 'black', fill=False, lw=0.3))
     
     # Draw Cuts
-    numCuts = len(cuts)/2
+    numCuts = len(cuts)//2
 
     for i in range(numCuts):
         
