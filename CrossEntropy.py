@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 8  # Number of rectangles to be generated
+N = 19  # Number of rectangles to be generated
 
 LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 1000 # number of new sessions per iteration - batch size
@@ -630,7 +630,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 16 # run number used in the filename
+myRand = 14 # run number used in the filename
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it

@@ -1,7 +1,5 @@
 from collections import namedtuple
 
-from plotGenerations import plot_rectangles
-
 # max number of cut through rectangles - this is a very safe upper bound as we are not going beyond n = 20
 INF = 10000
 
