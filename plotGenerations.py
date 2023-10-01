@@ -59,6 +59,7 @@ def plot_rectangles_with_cuts(rects, min, max, idx):
             anchor = (box.bottomLeft[0], line.point)
             ax.add_patch(patches.Rectangle(anchor, width, 0, edgecolor = 'red', fill=True, lw=0.3))
 
+    ax.add_patch(patches.Rectangle((0,0), max-min, max-min, edgecolor = 'red', fill=False, lw=0.3))
 
     plt.annotate('Killed ' + str(kills) +" Rectangles", (0,0), (0, -20), xycoords='axes fraction', textcoords='offset points', va='top')
     
@@ -66,5 +67,5 @@ def plot_rectangles_with_cuts(rects, min, max, idx):
 
     plt.close(fig)
 
-rects = [Rectangle(bottomLeft=(25, 72), topRight=(44, 85)), Rectangle(bottomLeft=(35, 0), topRight=(104, 39)), Rectangle(bottomLeft=(105, 0), topRight=(188, 25)), Rectangle(bottomLeft=(105, 25), topRight=(165, 70)), Rectangle(bottomLeft=(165, 25), topRight=(199, 47)), Rectangle(bottomLeft=(0, 45), topRight=(24, 115)), Rectangle(bottomLeft=(44, 79), topRight=(121, 99)), Rectangle(bottomLeft=(121, 70), topRight=(131, 110)), Rectangle(bottomLeft=(131, 80), topRight=(181, 86)), Rectangle(bottomLeft=(189, 47), topRight=(199, 116)), Rectangle(bottomLeft=(0, 115), topRight=(42, 123)), Rectangle(bottomLeft=(42, 99), topRight=(67, 124)), Rectangle(bottomLeft=(67, 101), topRight=(112, 184)), Rectangle(bottomLeft=(112, 117), topRight=(127, 177))]
+rects = [Rectangle(bottomLeft=(0, 0), topRight=(13, 80)), Rectangle(bottomLeft=(49, 0), topRight=(104, 25)), Rectangle(bottomLeft=(95, 25), topRight=(105, 45)), Rectangle(bottomLeft=(105, 14), topRight=(157, 34)), Rectangle(bottomLeft=(180, 25), topRight=(199, 98)), Rectangle(bottomLeft=(50, 45), topRight=(52, 85)), Rectangle(bottomLeft=(52, 40), topRight=(90, 90)), Rectangle(bottomLeft=(90, 45), topRight=(164, 70)), Rectangle(bottomLeft=(80, 113), topRight=(95, 179)), Rectangle(bottomLeft=(157, 71), topRight=(180, 96)), Rectangle(bottomLeft=(16, 115), topRight=(32, 135)), Rectangle(bottomLeft=(43, 115), topRight=(80, 135)), Rectangle(bottomLeft=(95, 78), topRight=(120, 136)), Rectangle(bottomLeft=(120, 85), topRight=(140, 184)), Rectangle(bottomLeft=(140, 99), topRight=(190, 173)), Rectangle(bottomLeft=(12, 135), topRight=(75, 160)), Rectangle(bottomLeft=(60, 160), topRight=(70, 199)), Rectangle(bottomLeft=(70, 179), topRight=(108, 199)), Rectangle(bottomLeft=(21, 19), topRight=(45, 100))]
 plot_rectangles_with_cuts(rects, 0, 200, 0)

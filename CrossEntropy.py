@@ -56,6 +56,9 @@ region_bound = 200  # we will generate rectangles within a region enclosed by x 
 observation_space = ( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + ( N * 5 )  # The state representation will have N*4 decisions, 2 N*N interval graph 
 # representation and a one hot encoding of the current decision
 
+# Rectangle set obtained from previous runs to begin with
+start_rectangle_set = [Rectangle(bottomLeft=(0, 0), topRight=(13, 80)), Rectangle(bottomLeft=(49, 0), topRight=(104, 25)), Rectangle(bottomLeft=(95, 25), topRight=(105, 45)), Rectangle(bottomLeft=(105, 14), topRight=(157, 34)), Rectangle(bottomLeft=(180, 25), topRight=(199, 98)), Rectangle(bottomLeft=(50, 45), topRight=(52, 85)), Rectangle(bottomLeft=(52, 40), topRight=(90, 90)), Rectangle(bottomLeft=(90, 45), topRight=(164, 70)), Rectangle(bottomLeft=(80, 113), topRight=(95, 179)), Rectangle(bottomLeft=(157, 71), topRight=(180, 96)), Rectangle(bottomLeft=(16, 115), topRight=(32, 135)), Rectangle(bottomLeft=(43, 115), topRight=(80, 135)), Rectangle(bottomLeft=(95, 78), topRight=(120, 136)), Rectangle(bottomLeft=(120, 85), topRight=(140, 184)), Rectangle(bottomLeft=(140, 99), topRight=(190, 173)), Rectangle(bottomLeft=(12, 135), topRight=(75, 160)), Rectangle(bottomLeft=(60, 160), topRight=(70, 199)), Rectangle(bottomLeft=(70, 179), topRight=(108, 199)), Rectangle(bottomLeft=(21, 19), topRight=(45, 100))]
+
 len_game = N*5 
 state_dim = (observation_space,)
 
@@ -97,6 +100,9 @@ def stateFromRects(rects):
 	return state
 
 def initial_state():
+	return stateFromRects(start_rectangle_set)
+
+def initial_state_equispaced():
 	# we will make a grid of identical rectangles - height 20, width 10, spacing 20
 	height, width, spacing = 20, 10, 25
 	num_rows = math.sqrt(N)//1	# integer floor value
@@ -630,7 +636,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 14 # run number used in the filename
+myRand = 2 # run number used in the filename
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it
@@ -787,7 +793,7 @@ for i in range(1000000): #1000000 generations should be plenty
 			f.write(str(super_actions[0]))
 			f.write("\n")
 			
-	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+	if (i%10 == 0):	# Make a plot of best generation every 50th iteration
 		rectangles = rectsFromState(super_generations[0])
 		with open(f'plots/run_{str(myRand)}/displayed_generations.txt', 'a') as f:
 			f.write(str(rectangles[1]))
