@@ -57,7 +57,8 @@ observation_space = ( region_bound * N * 4 ) + ( 2 * N * N ) + ( 2 * N ) + ( N *
 # representation and a one hot encoding of the current decision
 
 # Rectangle set obtained from previous runs to begin with
-start_rectangle_set = [Rectangle(bottomLeft=(0, 0), topRight=(13, 80)), Rectangle(bottomLeft=(49, 0), topRight=(104, 25)), Rectangle(bottomLeft=(95, 25), topRight=(105, 45)), Rectangle(bottomLeft=(105, 14), topRight=(157, 34)), Rectangle(bottomLeft=(180, 25), topRight=(199, 98)), Rectangle(bottomLeft=(50, 45), topRight=(52, 85)), Rectangle(bottomLeft=(52, 40), topRight=(90, 90)), Rectangle(bottomLeft=(90, 45), topRight=(164, 70)), Rectangle(bottomLeft=(80, 113), topRight=(95, 179)), Rectangle(bottomLeft=(157, 71), topRight=(180, 96)), Rectangle(bottomLeft=(16, 115), topRight=(32, 135)), Rectangle(bottomLeft=(43, 115), topRight=(80, 135)), Rectangle(bottomLeft=(95, 78), topRight=(120, 136)), Rectangle(bottomLeft=(120, 85), topRight=(140, 184)), Rectangle(bottomLeft=(140, 99), topRight=(190, 173)), Rectangle(bottomLeft=(12, 135), topRight=(75, 160)), Rectangle(bottomLeft=(60, 160), topRight=(70, 199)), Rectangle(bottomLeft=(70, 179), topRight=(108, 199)), Rectangle(bottomLeft=(21, 19), topRight=(45, 100))]
+start_rectangle_set = [Rectangle(bottomLeft=(0, 55), topRight=(35, 85)), Rectangle(bottomLeft=(35, 13), topRight=(120, 70)), Rectangle(bottomLeft=(120, 14), topRight=(130, 85)), Rectangle(bottomLeft=(130, 0), topRight=(159, 65)), Rectangle(bottomLeft=(159, 0), topRight=(188, 65)), Rectangle(bottomLeft=(26, 85), topRight=(36, 98)), Rectangle(bottomLeft=(60, 99), topRight=(105, 107)), Rectangle(bottomLeft=(98, 79), topRight=(107, 83)), Rectangle(bottomLeft=(130, 65), topRight=(140, 108)), Rectangle(bottomLeft=(140, 75), topRight=(199, 115)), Rectangle(bottomLeft=(0, 119), topRight=(76, 160)), Rectangle(bottomLeft=(36, 73), topRight=(60, 88)), Rectangle(bottomLeft=(76, 155), topRight=(97, 179)), Rectangle(bottomLeft=(105, 103), topRight=(129, 162)), Rectangle(bottomLeft=(181, 128), topRight=(199, 159)), Rectangle(bottomLeft=(34, 160), topRight=(60, 199)), Rectangle(bottomLeft=(60, 179), topRight=(69, 199)), Rectangle(bottomLeft=(70, 179), topRight=(107, 199)), Rectangle(bottomLeft=(107, 162), topRight=(192, 199))]
+start_kills = 3
 
 len_game = N*5 
 state_dim = (observation_space,)
@@ -636,7 +637,17 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 2 # run number used in the filename
+myRand = 4 # run number used in the filename
+
+with open(f'plots/run_{str(myRand)}/initial_config.txt', 'a') as f:
+	f.write("Collision avoidance approach with CUSTOM Initial Set, each rectangle gets 4 operations performed on it one by one")
+	f.write("\n")
+	f.write(f"Initial Rectangle Set with {start_kills} KILLS is: ")
+	f.write(str(start_rectangle_set))
+	f.write("\n")
+	f.write(f"Num Rectangles = {N},  Learning Rate = {LEARNING_RATE}, Percentile = {percentile}, Super Percentile = {super_percentile}, Num Actions = {n_actions}, Region Bound = {region_bound}")
+	f.write("\n")
+	f.write(f"NN Layers : {FIRST_LAYER_NEURONS}, {SECOND_LAYER_NEURONS}, {THIRD_LAYER_NEURONS}")
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it
@@ -798,4 +809,6 @@ for i in range(1000000): #1000000 generations should be plenty
 		with open(f'plots/run_{str(myRand)}/displayed_generations.txt', 'a') as f:
 			f.write(str(rectangles[1]))
 			f.write("\n")
-		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
+		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles'
+
+		

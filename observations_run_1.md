@@ -32,7 +32,12 @@ Let's break this down
 **Observations from the runs** :
 
 Run 1 - 18 Rectangles, Starting with a 4 Kill Rectangle set that was generated previously
-Run 2 - 19 Rectangles, Starting with a 4 Kill Set for 18 rectangles and a lower learning rate - run on HPC cluster
+Run 2 - 19 Rectangles, Starting with a 4 Kill Set for 18 rectangles plus one rectangle and same learning rate - Seems to be working well, but not moving beyond 4 kills - RUN INTERRUPTED
+
+Run 3 - 19 Rectangles, Starting with a 3 kill set for 19 rectangles and same learning rate (0.0001) - Seems to be working well (till 60 sessions - we have many generations of 4 kills but none with 5 till now) - RUN INTERRUPTED
+
+Run 4 - 19 Rectangles, Starting with a 3 kill set for 19 rectangles, learning rate 0.0001
+Run 5 - 19 Rectangles, Same 3 kill set, learning rate 0.00005 - Running on HPC
 
 **Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 
