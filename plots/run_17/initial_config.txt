@@ -1,0 +1,4 @@
+Collision avoidance approach, each rectangle gets 4 operations performed on it one by one
+Initial Rectangle Set is equispaced 20X10
+Num Rectangles = 20,  Learning Rate = 5e-05, Percentile = 93, Super Percentile = 95, Num Actions = 101, Region Bound = 200
+NN Layers : 256, 128, 128

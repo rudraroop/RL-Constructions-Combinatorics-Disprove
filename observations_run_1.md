@@ -55,8 +55,12 @@ Run 12 - 17 Rectangles, same
 Run 13 - 18 Rectangles, same
 
 # to do
-Run 14 - 19 Rectangles, same
-Run 15 - 20 Rectangles, same
+Run 14 - 19 Rectangles, same - cut short by power cut
+Run 15 - 19 Rectangles, same - plateaus after 100 or so sessions after which it isn't able to produce more examples of 4 kill sets 
+
+Run 16 - 20 Rectangles, same - only produced two constructions of max kills 5 till the 100th session. Showing no more examples of kills = 5 after the 30th session. In fact, even the number of 4 kill sets is quite low. This may improve with a lower learning rate or perhaps more layers in the network?
+
+Run 17 - 20 Rectangels, same as 16 with 0.00005 learning rate instead of 0.0001
 
 **Another approach - this is currently included** to solving the problem in larger numbers of rectangles could be to keep generating the first iteration again and again until at least one lucky hit is found. We only move on to training once we have a lucky hit.
 

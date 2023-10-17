@@ -24,9 +24,9 @@ import matplotlib.pyplot as plt
 from OptimalCuts import Rectangle, intervalsIntersect, optimalCuts
 from plotGenerations import plot_rectangles
 
-N = 19  # Number of rectangles to be generated
+N = 20  # Number of rectangles to be generated
 
-LEARNING_RATE = 0.0001 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
+LEARNING_RATE = 0.00005 # Increase this to make convergence faster, decrease if the algorithm gets stuck in local optima too often.
 n_sessions = 1000 # number of new sessions per iteration - batch size
 percentile = 93 # top 100-X percentile we are learning from
 super_percentile = 95 # top 100-X percentile that survives to next iteration
@@ -630,7 +630,7 @@ sessgen_time = 0
 fit_time = 0
 score_time = 0
 
-myRand = 14 # run number used in the filename
+myRand = 17 # run number used in the filename
 
 '''
 sessions = generate_session(model,2,0)	# Play one episode and evaluate it
@@ -787,9 +787,20 @@ for i in range(1000000): #1000000 generations should be plenty
 			f.write(str(super_actions[0]))
 			f.write("\n")
 			
-	if (i%50 == 0):	# Make a plot of best generation every 50th iteration
+	if (i%10 == 0):	# Make a plot of best generation every 10th iteration
 		rectangles = rectsFromState(super_generations[0])
 		with open(f'plots/run_{str(myRand)}/displayed_generations.txt', 'a') as f:
 			f.write(str(rectangles[1]))
 			f.write("\n")
 		plot_rectangles(rectangles[1], super_rewards[0]/reward_scaling, i, 0, region_bound, myrand = myRand)		# Scale reward to further incentivize killed rectangles
+
+	if (i == 0): # record initial configurations
+		with open(f'plots/run_{str(myRand)}/initial_config.txt', 'a') as f:
+			f.write("Collision avoidance approach, each rectangle gets 4 operations performed on it one by one")
+			f.write("\n")
+			f.write("Initial Rectangle Set is equispaced 20X10")
+			#f.write(str(start_rectangle_set))
+			f.write("\n")
+			f.write(f"Num Rectangles = {N},  Learning Rate = {LEARNING_RATE}, Percentile = {percentile}, Super Percentile = {super_percentile}, Num Actions = {n_actions}, Region Bound = {region_bound}")
+			f.write("\n")
+			f.write(f"NN Layers : {FIRST_LAYER_NEURONS}, {SECOND_LAYER_NEURONS}, {THIRD_LAYER_NEURONS}")
